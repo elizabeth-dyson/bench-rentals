@@ -18,6 +18,16 @@ def get_authenticated_user() -> Any | None:
     return st.session_state.get(_USER_SESSION_KEY)
 
 
+def get_authenticated_user_display_name() -> str:
+    """Return the current user's display name, email, or a friendly fallback."""
+    user = get_authenticated_user()
+    if user is None:
+        return "there"
+
+    metadata = user.user_metadata or {}
+    return metadata.get("display_name") or user.email or "there"
+
+
 def render_login() -> None:
     """Render the internal email/password login form."""
     st.title("Bench Rental Manager")
