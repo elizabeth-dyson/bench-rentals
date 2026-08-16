@@ -1,16 +1,7 @@
 import streamlit as st
-from supabase import Client, create_client
 
-
-@st.cache_resource
-def get_supabase() -> Client:
-    return create_client(
-        st.secrets["SUPABASE_URL"],
-        st.secrets["SUPABASE_KEY"],
-    )
-
-
-supabase = get_supabase()
+from components.auth import is_authenticated, render_login
+from pages.home import render_home
 
 
 st.set_page_config(
@@ -19,9 +10,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("🪑 Bench Rental Manager")
-st.success("The bench empire is online.")
-
-response = supabase.table("connection-test").select("*").execute()
-
-st.write(response.data)
+if is_authenticated():
+    render_home()
+else:
+    render_login()
