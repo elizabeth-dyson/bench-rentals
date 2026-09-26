@@ -7,6 +7,7 @@ from components.auth import (
 )
 from views.bookings import render_bookings
 from views.home import render_home
+from components.presentation import render_wordmark
 
 
 def render_navigation():
@@ -14,9 +15,13 @@ def render_navigation():
     user = get_authenticated_user()
     display_name = get_authenticated_user_display_name()
 
+    with st.sidebar:
+        render_wordmark()
+        st.caption("Your rental workspace")
+
     page = st.navigation(
         {
-            "Bench Rental Manager": [
+            "Workspace": [
                 st.Page(
                     render_home,
                     title="Home",
@@ -35,21 +40,7 @@ def render_navigation():
     )
 
     with st.sidebar:
-        st.caption("Coming soon")
-        st.button(
-            "Availability",
-            key="nav_availability",
-            disabled=True,
-            width="stretch",
-        )
-        st.button(
-            "Settings",
-            key="nav_settings",
-            disabled=True,
-            width="stretch",
-        )
-
-        st.divider()
+        st.space("large")
         st.caption("Signed in as")
         st.write(display_name)
         if user is not None and user.email:

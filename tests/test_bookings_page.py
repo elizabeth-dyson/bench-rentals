@@ -19,6 +19,7 @@ from services.leads import (
 class BookingsPageTests(unittest.TestCase):
     def setUp(self):
         self.streamlit = patch("views.bookings.st").start()
+        patch("components.presentation.st", self.streamlit).start()
         self.streamlit.session_state = {}
         self.streamlit.query_params = {}
         self.list_active_leads = patch("views.bookings.list_active_leads").start()
@@ -54,7 +55,10 @@ class BookingsPageTests(unittest.TestCase):
         render_bookings()
 
         self.streamlit.info.assert_called_once_with("No active leads.")
-        self.streamlit.container.assert_not_called()
+        self.assertFalse(any(
+            item.kwargs.get("key", "").startswith("view_booking_")
+            for item in self.streamlit.button.call_args_list
+        ))
 
     def test_renders_active_lead_count_and_cards(self):
         self.list_active_leads.return_value = [
@@ -64,19 +68,15 @@ class BookingsPageTests(unittest.TestCase):
 
         render_bookings()
 
-        self.streamlit.subheader.assert_called_once_with("Active leads (2 leads)")
-        self.assertEqual(self.streamlit.container.call_count, 2)
-        self.streamlit.caption.assert_has_calls(
-            [call("BR-2027-001"), call("BR-2027-002")]
-        )
+        self.streamlit.subheader.assert_any_call("Active leads (2 leads)")
+        self.streamlit.caption.assert_any_call("BR-2027-001")
+        self.streamlit.caption.assert_any_call("BR-2027-002")
         self.streamlit.write.assert_has_calls(
             [
-                call("Event date: Jun 14, 2027"),
-                call("Benches requested: 1 bench"),
-                call("Stage: Lead"),
-                call("Event date: Jun 20, 2027"),
-                call("Benches requested: 12 benches"),
-                call("Stage: Lead"),
+                call("Jun 14, 2027"),
+                call("1 bench"),
+                call("Jun 20, 2027"),
+                call("12 benches"),
             ]
         )
         self.streamlit.button.assert_has_calls(
@@ -84,14 +84,14 @@ class BookingsPageTests(unittest.TestCase):
                 call(
                     "View details",
                     key="view_booking_BR-2027-001",
-                    icon=":material/visibility:",
-                    width="stretch",
+                    icon=":material/arrow_forward:",
+                    width="content",
                 ),
                 call(
                     "View details",
                     key="view_booking_BR-2027-002",
-                    icon=":material/visibility:",
-                    width="stretch",
+                    icon=":material/arrow_forward:",
+                    width="content",
                 ),
             ]
         )
@@ -116,11 +116,14 @@ class BookingsPageTests(unittest.TestCase):
 
         render_bookings()
 
-        self.streamlit.subheader.assert_has_calls(
-            [call("Active leads (2 leads)"), call("Past leads needing attention")]
-        )
+        self.streamlit.subheader.assert_any_call("Active leads (2 leads)")
+        self.streamlit.subheader.assert_any_call("Past leads needing attention")
         self.streamlit.warning.assert_called_once()
-        self.streamlit.caption.assert_has_calls([call("future"), call("past")])
+        displayed = [
+            item.args[0] for item in self.streamlit.caption.call_args_list
+            if item.args[0] in {"future", "past"}
+        ]
+        self.assertEqual(displayed, ["future", "past"])
 
     def test_renders_safe_error_and_retry(self):
         self.list_active_leads.side_effect = BookingServiceError("hidden detail")
@@ -179,10 +182,10 @@ class BookingsPageTests(unittest.TestCase):
             filters,
             date(2027, 6, 14),
         )
-        self.streamlit.subheader.assert_called_once_with(
+        self.streamlit.subheader.assert_any_call(
             "Search results (1 booking)"
         )
-        self.streamlit.write.assert_any_call("Stage: Lost")
+        self.streamlit.badge.assert_any_call("Lost", color="gray")
 
     def test_search_mode_distinguishes_empty_database_and_no_matches(self):
         self.streamlit.session_state["booking_search_filters"] = BookingFilters()
@@ -311,7 +314,7 @@ class BookingsPageTests(unittest.TestCase):
             key="edit_lead",
             icon=":material/edit:",
             type="primary",
-            width="stretch",
+            width="content",
         )
 
     def test_edit_button_sets_edit_mode(self):

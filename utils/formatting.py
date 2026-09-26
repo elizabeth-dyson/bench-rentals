@@ -4,6 +4,14 @@ from datetime import date, datetime
 from typing import Any
 
 
+def format_bench_count(value: Any) -> str:
+    """Format a positive bench count with a safe fallback."""
+    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+        return "Bench count unavailable"
+    label = "bench" if value == 1 else "benches"
+    return f"{value} {label}"
+
+
 def format_booking_stage(stage: str | None) -> str:
     """Format a booking stage for display."""
     if not stage or not stage.strip():

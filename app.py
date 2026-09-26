@@ -7,7 +7,7 @@ from utils.scrolling import render_scroll_to_top
 
 st.set_page_config(
     page_title="Bench Rental Manager",
-    page_icon="🪑",
+    page_icon=":material/event_seat:",
     layout="wide",
 )
 

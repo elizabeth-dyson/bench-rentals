@@ -2,6 +2,7 @@ from typing import Any
 
 import streamlit as st
 
+from components.presentation import render_wordmark
 from services.supabase import clear_supabase_client, get_supabase_client
 from utils.scrolling import request_scroll_to_top
 
@@ -31,18 +32,25 @@ def get_authenticated_user_display_name() -> str:
 
 def render_login() -> None:
     """Render the internal email/password login form."""
-    st.title("Bench Rental Manager")
-    st.write("Sign in to continue.")
-
-    with st.form("login_form"):
-        email = st.text_input("Email", autocomplete="email")
-        password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Sign in", width="stretch")
+    with st.container(horizontal_alignment="center"):
+        with st.container(width=440):
+            st.space("large")
+            render_wordmark()
+            st.caption("A little organization for every gathering.")
+            with st.form("login_form"):
+                st.subheader("Welcome back")
+                st.write("Sign in to manage your leads and rentals.")
+                email = st.text_input("Email", autocomplete="email")
+                password = st.text_input("Password", type="password")
+                submitted = st.form_submit_button(
+                    "Sign in", type="primary", width="stretch"
+                )
+            feedback = st.container()
 
     if not submitted:
         return
     if not email.strip() or not password:
-        st.error("Enter both your email and password.")
+        feedback.error("Enter both your email and password.")
         return
 
     try:
@@ -50,11 +58,11 @@ def render_login() -> None:
             {"email": email.strip(), "password": password}
         )
     except Exception:
-        st.error("We couldn't sign you in. Check your email and password and try again.")
+        feedback.error("We couldn't sign you in. Check your email and password and try again.")
         return
 
     if response.user is None or response.session is None:
-        st.error("We couldn't sign you in. Check your email and password and try again.")
+        feedback.error("We couldn't sign you in. Check your email and password and try again.")
         return
 
     st.session_state[_USER_SESSION_KEY] = response.user

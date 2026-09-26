@@ -7,6 +7,7 @@ from urllib.parse import quote, urlparse
 
 import streamlit as st
 
+from components.presentation import render_booking_summary, render_stage_badge
 from services.bookings import (
     BOOKING_STAGES,
     BookingFilters,
@@ -37,6 +38,7 @@ from services.leads import (
     validate_lead_input,
 )
 from utils.formatting import (
+    format_bench_count as _format_bench_count,
     format_booking_date,
     format_booking_source,
     format_booking_stage,
@@ -59,13 +61,19 @@ _DISPOSITION_CLEAR_KEY = "lead_disposition_clear_draft"
 
 def render_bookings() -> None:
     """Render the Bookings workspace and lead-creation flow."""
+    form_mode = (
+        st.session_state.get("lead_flow_step")
+        or st.query_params.get("mode") == "edit"
+    )
+    with st.container(width=760 if form_mode else 1150):
+        _render_bookings_workspace()
+
+
+def _render_bookings_workspace() -> None:
     selected_booking = st.query_params.get("booking")
     if selected_booking is not None:
         _render_booking_detail(selected_booking)
         return
-
-    st.title("Bookings")
-    st.write("Manage leads and rentals from this workspace.")
 
     success_number = st.session_state.pop("lead_success_number", None)
     if success_number:
@@ -73,7 +81,7 @@ def render_bookings() -> None:
 
     flow_step = st.session_state.get("lead_flow_step")
     if flow_step:
-        if st.button("Cancel", icon=":material/close:", width="stretch"):
+        if st.button("Cancel", icon=":material/close:"):
             _clear_lead_flow()
             request_scroll_to_top()
             st.rerun()
@@ -83,12 +91,14 @@ def render_bookings() -> None:
             _render_lead_review()
         return
 
-    if st.button(
-        "Add lead",
-        icon=":material/add:",
-        type="primary",
-        width="stretch",
-    ):
+    with st.container(horizontal=True, vertical_alignment="center"):
+        with st.container():
+            st.title("Bookings")
+            st.caption("Keep every inquiry moving, from first contact to next steps.")
+        add_lead = st.button(
+            "Add lead", icon=":material/add:", type="primary", width="content"
+        )
+    if add_lead:
         st.session_state["lead_flow_step"] = "form"
         request_scroll_to_top()
         st.rerun()
@@ -260,10 +270,11 @@ def _clear_booking_search_state() -> None:
 
 
 def _render_create_lead_form() -> None:
-    st.subheader("Add a lead")
+    st.title("Add a lead")
     st.caption("Enter what you know now. Optional details can be updated later.")
 
     with st.form("create_lead_form", enter_to_submit=False):
+        st.markdown("#### Customer and event")
         customer_name = st.text_input("Customer name", key="lead_customer_name")
         event_date = st.date_input(
             "Event date",
@@ -319,6 +330,7 @@ def _render_create_lead_form() -> None:
             "Facebook conversation URL (optional)",
             key="lead_facebook_conversation_url",
         )
+        st.markdown("#### Notes")
         customer_notes = st.text_area(
             "Customer notes (optional)",
             key="lead_customer_notes",
@@ -327,7 +339,9 @@ def _render_create_lead_form() -> None:
             "Internal notes (optional)",
             key="lead_internal_notes",
         )
-        submitted = st.form_submit_button("Review lead", width="stretch")
+        submitted = st.form_submit_button(
+            "Review lead", type="primary", width="stretch"
+        )
 
     if not submitted:
         return
@@ -379,7 +393,7 @@ def _render_lead_review() -> None:
         st.rerun()
         return
 
-    st.subheader("Review lead")
+    st.title("Review lead")
     with st.container(border=True):
         st.markdown(f"### {lead.customer_name}")
         st.write(f"Event date: {format_booking_date(lead.event_date)}")
@@ -411,7 +425,9 @@ def _render_lead_review() -> None:
             index=len(options) - 1,
             key="lead_customer_selection",
         )
-        submitted = st.form_submit_button("Create lead", width="stretch")
+        submitted = st.form_submit_button(
+            "Create lead", type="primary", width="stretch"
+        )
 
     if not submitted:
         return
@@ -453,28 +469,10 @@ def _clear_lead_flow() -> None:
 
 
 def _render_booking_card(booking: BookingRecord) -> None:
-    customer = booking.get("primary_customer")
-    customer_record = customer if isinstance(customer, Mapping) else None
-
-    with st.container(border=True):
-        st.markdown(f"### {format_customer_name(customer_record)}")
-        st.caption(booking.get("booking_number") or "Booking number not set")
-        st.write(f"Event date: {format_booking_date(booking.get('event_date'))}")
-        st.write(
-            "Benches requested: "
-            f"{_format_bench_count(booking.get('requested_bench_count'))}"
-        )
-        st.write(f"Stage: {format_booking_stage(booking.get('stage'))}")
-        booking_number = booking.get("booking_number")
-        if is_valid_booking_number(booking_number) and st.button(
-            "View details",
-            key=f"view_booking_{booking_number}",
-            icon=":material/visibility:",
-            width="stretch",
-        ):
-            st.query_params["booking"] = booking_number
-            request_scroll_to_top()
-            st.rerun()
+    if render_booking_summary(booking, key_prefix="view_booking"):
+        st.query_params["booking"] = booking["booking_number"]
+        request_scroll_to_top()
+        st.rerun()
 
 
 def _render_booking_detail(booking_number: Any) -> None:
@@ -484,7 +482,7 @@ def _render_booking_detail(booking_number: Any) -> None:
         "Back to bookings",
         key="back_to_bookings",
         icon=":material/arrow_back:",
-        width="stretch",
+        width="content",
     ):
         _clear_booking_route()
         request_scroll_to_top()
@@ -525,9 +523,23 @@ def _render_booking_detail(booking_number: Any) -> None:
 
     customer = booking.get("primary_customer")
     customer_record = customer if isinstance(customer, Mapping) else None
-    st.title(format_customer_name(customer_record))
-    st.caption(booking.get("booking_number") or "Booking number not set")
-    st.write(f"Stage: {format_booking_stage(booking.get('stage'))}")
+    with st.container(horizontal=True, vertical_alignment="center"):
+        with st.container():
+            st.title(format_customer_name(customer_record))
+            st.caption(booking.get("booking_number") or "Booking number not set")
+            render_stage_badge(booking.get("stage"))
+        if booking.get("stage") == "lead" and st.button(
+            "Edit lead",
+            key="edit_lead",
+            icon=":material/edit:",
+            type="primary",
+            width="content",
+        ):
+            _clear_edit_state()
+            st.query_params["mode"] = "edit"
+            request_scroll_to_top()
+            st.rerun()
+            return
 
     success_number = st.session_state.pop("lead_update_success", None)
     if success_number:
@@ -543,22 +555,12 @@ def _render_booking_detail(booking_number: Any) -> None:
         }
         st.success(success_messages[disposition_success.stage])
 
-    _render_contact_details(customer_record, booking)
-    _render_event_details(booking)
+    with st.container(horizontal=True, vertical_alignment="top"):
+        with st.container(width=540):
+            _render_contact_details(customer_record, booking)
+        with st.container(width=540):
+            _render_event_details(booking)
     _render_notes(booking)
-
-    if booking.get("stage") == "lead" and st.button(
-        "Edit lead",
-        key="edit_lead",
-        icon=":material/edit:",
-        type="primary",
-        width="stretch",
-    ):
-        _clear_edit_state()
-        st.query_params["mode"] = "edit"
-        request_scroll_to_top()
-        st.rerun()
-        return
 
     _render_lead_status(
         booking,
@@ -743,6 +745,7 @@ def _render_edit_lead(booking: BookingRecord) -> None:
     )
 
     with st.form("edit_lead_form", enter_to_submit=False):
+        st.markdown("#### Customer and event")
         customer_name = st.text_input("Customer name", key="edit_customer_name")
         event_date_value = st.date_input(
             "Event date", format="MM/DD/YYYY", key="edit_event_date"
@@ -785,6 +788,7 @@ def _render_edit_lead(booking: BookingRecord) -> None:
             "Facebook conversation URL (optional)",
             key="edit_facebook_conversation_url",
         )
+        st.markdown("#### Notes")
         customer_notes = st.text_area(
             "Customer notes (optional)", key="edit_customer_notes"
         )
@@ -1159,9 +1163,3 @@ def _phone_link_target(value: str | None) -> str | None:
     prefix = "+" if value.strip().startswith("+") else ""
     return f"tel:{prefix}{digits}"
 
-
-def _format_bench_count(value: Any) -> str:
-    if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-        return "Bench count unavailable"
-    label = "bench" if value == 1 else "benches"
-    return f"{value} {label}"
