@@ -5,41 +5,48 @@ from components.auth import (
     get_authenticated_user_display_name,
     render_logout_button,
 )
+from views.bookings import render_bookings
+from views.home import render_home
 
 
-def render_navigation() -> None:
-    """Render the authenticated app navigation and account controls."""
+def render_navigation():
+    """Render authenticated navigation and return the selected Streamlit page."""
     user = get_authenticated_user()
     display_name = get_authenticated_user_display_name()
 
-    with st.sidebar:
-        st.title("Bench Rental Manager")
-        st.caption("Navigation")
+    page = st.navigation(
+        {
+            "Bench Rental Manager": [
+                st.Page(
+                    render_home,
+                    title="Home",
+                    icon=":material/home:",
+                    default=True,
+                ),
+                st.Page(
+                    render_bookings,
+                    title="Bookings",
+                    icon=":material/event_note:",
+                    url_path="bookings",
+                ),
+            ]
+        },
+        position="sidebar",
+    )
 
+    with st.sidebar:
+        st.caption("Coming soon")
         st.button(
-            "Home",
-            key="nav_home",
-            type="primary",
-            disabled=True,
-            use_container_width=True,
-        )
-        st.button(
-            "Bookings · Coming soon",
-            key="nav_bookings",
-            disabled=True,
-            use_container_width=True,
-        )
-        st.button(
-            "Availability · Coming soon",
+            "Availability",
             key="nav_availability",
             disabled=True,
-            use_container_width=True,
+            width="stretch",
         )
         st.button(
-            "Settings · Coming soon",
+            "Settings",
             key="nav_settings",
             disabled=True,
-            use_container_width=True,
+            width="stretch",
         )
 
         st.divider()
@@ -49,3 +56,5 @@ def render_navigation() -> None:
             if user.email != display_name:
                 st.caption(user.email)
         render_logout_button()
+
+    return page

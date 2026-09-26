@@ -3,6 +3,7 @@ from typing import Any
 import streamlit as st
 
 from services.supabase import clear_supabase_client, get_supabase_client
+from utils.scrolling import request_scroll_to_top
 
 
 _USER_SESSION_KEY = "authenticated_user"
@@ -36,7 +37,7 @@ def render_login() -> None:
     with st.form("login_form"):
         email = st.text_input("Email", autocomplete="email")
         password = st.text_input("Password", type="password")
-        submitted = st.form_submit_button("Sign in", use_container_width=True)
+        submitted = st.form_submit_button("Sign in", width="stretch")
 
     if not submitted:
         return
@@ -57,6 +58,7 @@ def render_login() -> None:
         return
 
     st.session_state[_USER_SESSION_KEY] = response.user
+    request_scroll_to_top()
     st.rerun()
 
 
@@ -70,11 +72,16 @@ def logout() -> None:
         pass
     finally:
         st.session_state.pop(_USER_SESSION_KEY, None)
+        for key in list(st.session_state):
+            if key.startswith(("lead_", "edit_", "booking_search_")):
+                del st.session_state[key]
+        st.query_params.clear()
         clear_supabase_client()
+        request_scroll_to_top()
 
 
 def render_logout_button() -> None:
     """Render a logout button and return to the login screen when clicked."""
-    if st.button("Log out", use_container_width=True):
+    if st.button("Log out", width="stretch"):
         logout()
         st.rerun()

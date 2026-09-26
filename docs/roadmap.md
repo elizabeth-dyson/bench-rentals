@@ -12,7 +12,80 @@ Build the overall Streamlit structure: navigation, dashboard, admin/settings are
 
 # 4. Bookings / Leads
 
-Build the core booking record flow: create a serious lead, see its status, edit it, search bookings, and move it through the booking lifecycle.
+Build the first complete internal lead-management loop in small increments. By the end, Mom can record a serious inquiry, find it later, review and update its information, and mark it lost or cancelled. Availability, holds, intake, pricing, quotes, payments, and confirmation remain later phases.
+
+## 4.1 Bookings Foundation
+
+- Activate Bookings in the sidebar.
+- Add the Bookings page and booking-service layer.
+- Handle loading, empty, and database-error states cleanly.
+- Establish reusable formatting for booking stages, dates, and customer names.
+
+## 4.2 Active Leads List
+
+- Make active leads the default Bookings view.
+- Show the customer, event date, requested bench count, and current stage.
+- Order leads so the most relevant upcoming inquiries are easiest to find.
+- Keep the layout usable as both a desktop table/list and mobile cards.
+
+## 4.3 Create a Lead
+
+- Add a mobile-friendly lead form.
+- Require customer name, event date, requested bench count, and at least one contact method.
+- Support email, phone/text, or Facebook contact information.
+- Save the customer, contact identity, booking relationship, and booking record using the existing schema.
+- Detect likely existing customers and reuse them instead of silently creating duplicates.
+
+## 4.4 Booking Detail
+
+- Open a booking from the list into a clear detail view.
+- Display its booking number, stage, customer/contact information, event details, requested benches, source, and notes.
+- Provide clear actions for editing or returning to the list.
+- Leave future workflow sections such as pricing, contracts, and payments out for now.
+
+## 4.5 Edit Lead Information
+
+- Allow updates to the core customer, contact, event, bench-count, source, and notes fields.
+- Apply the same validation rules used during creation.
+- Warn before abandoning unsaved changes.
+- Do not implement formal booking-change history yet; that remains Phase 12.
+
+## 4.6 Search and Filters
+
+- Search across recognizable booking information such as customer name, contact details, and booking number.
+- Filter by stage and event-date range.
+- Provide access to all records while continuing to emphasize active leads by default.
+- Include a simple way to clear filters and return to the active-leads view.
+
+## 4.7 Lead Disposition
+
+- Allow a lead to be marked lost or cancelled.
+- Confirm the action before changing the stage.
+- Keep closed records searchable rather than deleting them.
+- Allow an incorrectly closed record to be restored to lead.
+- Do not permit manual jumps into later workflow-owned stages.
+
+## 4.8 Phase Verification and Polish
+
+- Test the complete create → find → view → edit → close → restore flow.
+- Test customer matching and contact-method validation.
+- Verify empty, invalid, duplicate, and database-failure states.
+- Run the workflow on desktop and phone layouts.
+- Confirm authenticated RLS access remains enforced.
+
+## Interfaces and Boundaries
+
+- Add focused booking/customer service functions rather than querying Supabase directly from page code.
+- Reuse the existing bookings, customers, customer_identities, and booking_contacts tables without schema or RLS changes.
+- The Phase 4 UI may set only lead, lost, and cancelled; later phases own all other stage transitions.
+- A valid contact means email, phone for text/call, or a Facebook identity consistent with the selected preferred contact method.
+
+## Assumptions
+
+- Booking-number generation will use the existing database design and be finalized during the detailed plan for lead creation.
+- Active leads initially means records in the lead stage; the active view can expand as later workflows are implemented.
+- Each numbered piece receives its own detailed implementation plan before coding.
+- No customer-facing forms, inventory decisions, pricing, communication automation, or database redesign are part of Phase 4.
 
 # 5. Availability + Holds
 

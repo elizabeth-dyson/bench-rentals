@@ -2,7 +2,7 @@ import streamlit as st
 
 from components.auth import is_authenticated, render_login
 from components.navigation import render_navigation
-from pages.home import render_home
+from utils.scrolling import render_scroll_to_top
 
 
 st.set_page_config(
@@ -12,7 +12,12 @@ st.set_page_config(
 )
 
 if is_authenticated():
-    render_navigation()
-    render_home()
+    page = render_navigation()
 else:
-    render_login()
+    page = st.navigation(
+        [st.Page(render_login, title="Sign in", default=True)],
+        position="hidden",
+    )
+
+page.run()
+render_scroll_to_top()

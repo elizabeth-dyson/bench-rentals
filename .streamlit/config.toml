@@ -1,2 +1,2 @@
-[client]
-showSidebarNavigation = false
+[server]
+port = 8502
