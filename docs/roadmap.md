@@ -87,29 +87,103 @@ Build the first complete internal lead-management loop in small increments. By t
 - Each numbered piece receives its own detailed implementation plan before coding.
 - No customer-facing forms, inventory decisions, pricing, communication automation, or database redesign are part of Phase 4.
 
-# 5. Availability + Holds
+# 5. Intake + Inquiry Creation
 
-Build the next complete internal workflow in small increments. By the end, Mom can check whether enough benches are available for the full rental window, place a temporary hold, and manage its expiration or release without overbooking inventory. A successful availability check does not reserve benches; an active hold does. Customer intake and permanent booking confirmation remain later phases.
+Build on the completed Phase 4 foundation. The normal business flow is: customer contacts Mom → Mom sends an inquiry-form link → customer submits it → the app creates the inquiry → Mom reviews → quote → acceptance, contract/deposit, and confirmation in later phases. Mom can alternatively enter the same inquiry information for a phone/offline customer through the same underlying creation pipeline.
 
-## 5.1 Availability Rules and Foundation
+Phases 1–4 are complete and retained as written. Extend their customer, booking, validation, matching, search, detail, edit, and disposition work. Existing leads and their identifiers remain usable without re-entry.
 
-- Establish focused availability, inventory, and hold service functions using the existing database design.
+## 5.1 Shared Inquiry Model
+
+- Keep `bookings` as the canonical record from inquiry through completed rental. New inquiries can use the existing `lead` stage; do not add a separate leads table or create another booking when an inquiry progresses.
+- Verify the deployed schema against `docs/DATABASE.md` before implementing focused database changes.
+- Define shared inquiry fields for name/contact details, event date/type, requested benches, venue/address, delivery or pickup preference, relevant timing, and customer instructions.
+- Retain the minimum requirements of name, event date, positive bench count, and a usable contact method. Decide which additional fields are required at submission and which Mom can clarify before pricing.
+- Keep current working values in booking/customer/venue records and original submitted answers in `intake_submissions`. Later edits must not rewrite the original answers.
+- Separate customer-wide notes, rental-specific notes, and internal notes instead of copying one field into both customer and booking records.
+- Record entry method (`public_form` or `staff_entered`) separately from referral source, such as Facebook or word of mouth.
+
+## 5.2 Send the Form Without Creating a Lead
+
+- Give Mom a “Copy inquiry link” action to share through existing conversations without entering customer details first.
+- Use a reusable public inquiry URL as the default initial-entry design. Retain booking-specific private links for later follow-up on an existing inquiry.
+- If individual private invitations are chosen instead, allow them to exist without a booking and associate them upon submission. Do not create placeholder bookings just to issue a link.
+- Do not require an availability check, hold, customer acceptance, or customer login before sending or submitting the initial form.
+- Leave automated messaging and delivery tracking to Phase 15; copying and manually sending the link is enough here.
+
+## 5.3 One Creation Pipeline
+
+- Extend existing transactional creation so public submissions and staff entry share one underlying business operation and field validation.
+- On successful submission, create the working booking in `lead`, customer/contact relationships, and original intake submission together. Reuse booking numbering and existing validation.
+- `intake_submissions.booking_id` can remain required: create the booking before its submission within the same transaction, without prior manual entry.
+- Record submission origin and staff attribution when applicable; public submissions must not require a staff user ID or accept staff-only fields.
+- Prevent duplicate inquiries and submission versions from double clicks, retries after uncertain responses, and concurrent requests.
+- Reuse customer matching where appropriate, but do not expose existing customers or let public callers select arbitrary customer IDs or overwrite shared customer information. Route uncertain matches to staff review.
+- Attach follow-up information to existing Phase 4 bookings without changing their identifiers or creating another inquiry.
+
+## 5.4 Customer Form and Access
+
+- Build a mobile-friendly form accessible without signing in to the internal application.
+- Show clear validation, preserve answers after recoverable failures, and confirm success only after the inquiry and submission are saved.
+- Explain that submission requests a quote; it does not confirm a rental or reserve inventory.
+- Provide narrowly scoped server-side submission access while preserving internal RLS. Do not expose internal tables, customer searches, credentials, or staff notes.
+- Enforce token validation, expiration, revocation, and resubmission rules for private follow-up links.
+- Include appropriate input limits and abuse protection.
+
+## 5.5 Staff Entry and Review
+
+- Adapt “Add a lead” into “Enter inquiry,” collecting the same core information as the public form through the shared operation.
+- Preserve a submission snapshot with staff attribution, existing customer-match review/reuse, and optional staff-only context.
+- Show new inquiries in the existing workspace with “New inquiry” or “Needs review” labeling.
+- Use submission `review_status` and review metadata for pending, accepted, needs clarification, and superseded answers.
+- Keep new bookings in `lead` initially to preserve existing list/edit behavior. Update queries and guarded actions deliberately as later phases add active stages.
+- Let Mom inspect original answers alongside working values, resolve matches, and clarify venue/logistics details before pricing.
+- Preserve earlier submissions when follow-up answers arrive; define which proposed changes require review before replacing working values.
+- Accepting intake information means it is ready for the next business step, not that a quote or rental is confirmed.
+- Keep search, detail, edit, close, and restore usable for older leads and new inquiries. Full booking-change history remains Phase 12.
+
+## 5.6 Phase Verification and Polish
+
+- Test send link → submission → one saved inquiry → dashboard visibility → review → clarification, plus staff entry through the same pipeline.
+- Verify consistent working records, retry/concurrency protection, ambiguous customer matches, invalid input, failed saves, and recovery without partial records.
+- Verify public access restrictions and private-link expiration/revocation/resubmission where applicable.
+- Confirm follow-up submissions preserve existing Phase 4 records and identifiers.
+- Confirm working-record edits do not rewrite original submitted answers.
+- Test desktop and phone layouts and retain regression coverage for the completed Phase 4 workflow.
+
+## Interfaces and Boundaries
+
+- Reuse existing booking, customer, identity, contact, venue, intake-link, and submission tables where they fit. Keep focused database changes and documentation together.
+- Keep page rendering separate from business services and enforce multi-record writes transactionally.
+- Public submission and staff entry share business rules while retaining distinct access permissions.
+- Availability and holds remain separate in Phase 6; their unresolved business rules must not become prerequisites for inquiry creation.
+- Pricing, quotes, payments, contracts, and confirmation remain Phases 7–11.
+- Each numbered piece receives its own detailed implementation plan before coding.
+
+# 6. Availability + Holds
+
+Build availability checking around Phase 5 inquiries and existing Phase 4 records. A check does not reserve inventory. The hold work below preserves planned technical requirements, but whether/when holds are offered, their duration, and what blocks inventory remain business decisions to settle in 6.1 before implementing that behavior. Holds are not prerequisites for sending or submitting an inquiry. Permanent confirmation remains Phase 11.
+
+## 6.1 Availability Rules and Foundation
+
+- Settle when inventory becomes unavailable and whether/when Mom offers temporary holds; confirm the proposed behavior below before implementation rather than inferring it from the old phase order.
+- Establish focused availability, inventory, and hold services using the existing database design.
 - Verify the deployed schema against `docs/DATABASE.md` before implementing database changes.
 - Read and validate `total_bench_count` and `default_hold_hours` from `business_settings`; document how to initialize them without building the full Settings area.
 - Define which booking stages consume inventory, which quantity to use for confirmed rentals, and how holds remain effective as bookings move through later pre-confirmation stages.
 - Agree on the inventory-window boundary and turnaround rules, using the app's existing America/Chicago business timezone.
 - Show an actionable setup or data error when required settings or inventory records are incomplete rather than reporting misleading availability.
 
-## 5.2 Rental Inventory Window
+## 6.2 Rental Inventory Window
 
 - Add inventory-out and inventory-return date/time fields to the booking workflow.
 - Keep the inventory window separate from the event date and eventual delivery/pickup appointment details.
 - Cover early delivery, overnight rentals, rehearsal use, and return/turnaround time within the period that benches are unavailable.
 - Require a positive bench count and a complete, correctly ordered inventory window before checking availability or placing a hold.
-- Let existing Phase 4 leads supply these details when needed without making them required during initial lead creation.
+- Use submitted timing as input for Mom to establish the inventory window. Let existing leads and new inquiries supply missing details when needed without requiring a complete inventory window just to submit an inquiry.
 - Display local times clearly and store timezone-aware timestamps consistently.
 
-## 5.3 Availability Calculation
+## 6.3 Availability Calculation
 
 - Calculate available benches throughout the requested window using total inventory, inventory-consuming bookings, unexpired active holds, and active inventory blocks.
 - Use the lowest available quantity during the window; do not simply add every record that overlaps some part of it when those records do not overlap each other.
@@ -118,25 +192,25 @@ Build the next complete internal workflow in small increments. By the end, Mom c
 - When rechecking an existing hold, replace its current demand with the proposed demand rather than counting it against itself.
 - Return enough information to explain available quantity, shortages, and the bookings or blocks causing a conflict.
 
-## 5.4 Availability Check Workflow
+## 6.4 Availability Check Workflow
 
 - Activate Availability in the sidebar with a mobile-friendly bench-count and date/time check.
 - Offer the same check from booking detail, prefilled from the booking's requested count and inventory window.
 - Show a clear available/unavailable result, remaining capacity, and overlapping commitments with links to their booking details.
-- Allow a successful booking-specific check to move a lead to `availability_confirmed`; explain that this records a check, not a reservation or guarantee of future availability.
+- Record successful checks without losing inquiry review or quote progress. Decide in 6.1 whether `availability_confirmed` remains useful as an early stage; explain that a check is not a reservation or guarantee.
 - Invalidate displayed results when inputs change and provide a fresh check before proceeding.
 - Handle empty schedules, invalid input, missing setup, and database failures cleanly.
 
-## 5.5 Place a Temporary Hold
+## 6.5 Place a Temporary Hold
 
 - Let Mom review the booking, quantity, inventory window, and expiration before placing a hold.
 - Use the configured default hold duration and clearly display the expiration in local time.
 - Recheck capacity and create the hold in one database transaction so two users cannot reserve the same remaining benches.
 - Prevent duplicate effective holds for one booking, including repeated submissions and retries after an uncertain save result.
-- Update the hold, booking inventory fields, `hold_expires_at`, and the early booking stage together.
+- Update the hold, booking inventory fields, `hold_expires_at`, and any agreed stage transition together without overwriting inquiry review or quote progress.
 - Preserve the submitted details and explain conflicts if another action consumes capacity before the hold is saved.
 
-## 5.6 Hold Expiration, Extension, and Release
+## 6.6 Hold Expiration, Extension, and Release
 
 - Show the current hold quantity, inventory window, expiration, and effective status on booking detail.
 - Stop counting a hold as soon as its expiration is reached, using database time even when nobody has the app open.
@@ -145,7 +219,7 @@ Build the next complete internal workflow in small increments. By the end, Mom c
 - Require a fresh capacity check to reacquire an expired or released hold; never silently revive it.
 - Keep prior hold records and distinguish expired, released, and eventually converted holds.
 
-## 5.7 Inventory Blocks and Conflicts
+## 6.7 Inventory Blocks and Conflicts
 
 - Add a small internal workflow for taking benches out of availability for maintenance, damage, or personal use.
 - Record quantity, start, optional end, reason, and notes using `inventory_blocks`.
@@ -154,54 +228,50 @@ Build the next complete internal workflow in small increments. By the end, Mom c
 - Do not automatically release customer holds or cancel bookings to resolve an inventory shortage.
 - Keep full inventory/settings administration in Phase 18.
 
-## 5.8 Booking Workflow Integration
+## 6.8 Booking Workflow Integration
 
-- Expand the default active view to include `lead`, `availability_confirmed`, and `hold` so progressing a lead does not make it disappear from Mom's workspace.
-- Update the existing lead-only edit and disposition controls and RPC guards deliberately for these early workflow stages.
+- Keep inquiries visible in the active workspace through review and agreed availability/hold stages; include quote stages when implemented.
+- Extend Phase 5 review/edit and disposition controls and RPC guards deliberately for additional active stages.
 - Recheck availability and update booking/hold quantities and windows atomically when inventory-affecting details change; preserve the original hold if a proposed change fails.
-- Require another availability check when changes invalidate a prior `availability_confirmed` result.
+- Require another availability check when reviewed intake updates or staff edits invalidate a previous result.
 - Release any active hold atomically when an early-stage booking is marked lost or cancelled; restoring it returns to lead without restoring inventory rights.
-- Return an early `hold` booking to lead when its hold expires or is released, while preserving later intake/quote stages and showing their missing-hold status separately.
-- Define the handoff for Phase 6 intake changes and Phase 11 hold-to-reservation conversion without implementing those workflows yet.
+- If the agreed design uses an early `hold` stage, define expiration/release transitions without erasing inquiry review or quote progress; show missing-hold status separately.
+- Integrate Phase 5 intake review so proposed quantity/timing changes are validated before altering inventory commitments. Define the Phase 11 confirmation handoff without implementing confirmation yet.
 
-## 5.9 Phase Verification and Polish
+## 6.9 Phase Verification and Polish
 
-- Test the complete lead → inventory window → availability check → hold → extend/release/expire → recheck flow.
+- Test inquiry → reviewed inventory window → availability check, plus hold → extend/release/expire → recheck when the agreed business rules call for a hold.
 - Verify exact-capacity requests, shortages, partial and nested overlaps, non-simultaneous overlaps, adjacent windows, multi-day rentals, and open-ended blocks.
 - Test expiration boundaries, timezone/daylight-saving transitions, and availability after expiration while the app was closed.
 - Verify simultaneous hold attempts, duplicate submissions, failed changes, stale screens, and recovery after database errors against the database behavior as well as service/UI tests.
 - Test inventory-affecting edits, closure and restoration, conflicting blocks, and confirmed-booking fixtures without double-counting inventory.
-- Run the workflow on desktop and phone layouts, confirm authenticated RLS access remains enforced, and rerun the Phase 4 lead workflow checks.
+- Test desktop and phone layouts, authenticated RLS, and regression coverage for Phase 4 leads and Phase 5 inquiries.
 
 ## Interfaces and Boundaries
 
 - Reuse `bookings`, `holds`, `inventory_blocks`, and `business_settings`; add only focused RPCs, constraints, or indexes needed for correctness, with deployment SQL and database documentation kept together.
 - Keep Supabase access in services and enforce capacity checks and related writes in the database. Inventory-changing operations must share a concurrency strategy, including future confirmation and total-inventory changes.
 - Treat `holds` as the source of truth for temporary reservations; keep `bookings.hold_expires_at` as a synchronized summary rather than a second independent reservation.
-- Keep hold status separate from booking stage so an active hold can continue through intake, pricing, and quotes. Phase 5 owns the early `availability_confirmed` and `hold` transitions; later phases own their own transitions.
+- Keep hold status separate from inquiry review and quote progress. Phase 6 owns any agreed availability/hold transitions; later phases own their transitions. Sending an initial inquiry link never requires a hold.
 - Include existing confirmed rentals in availability calculations, but leave permanent reservation creation/conversion and confirmation requirements to Phase 11.
-- Full booking-change history remains Phase 12; customer messages, calendar sync, pricing, payments, contracts, and general admin tools remain outside Phase 5.
+- Full booking-change history remains Phase 12; customer messages, calendar sync, pricing, payments, contracts, and general admin tools remain outside Phase 6.
 
 ## Assumptions
 
 - Benches are interchangeable and managed by quantity, not by individual bench identifiers.
-- The approximate inventory count in the database documentation is context, not a hardcoded capacity; confirm the real count and hold duration during 5.1.
-- Proposed interval rule: inventory is unavailable from the start up to, but not including, the return time; any required turnaround buffer is included before that return time. Finalize this in 5.1 before implementing overlap checks.
-- Event date alone is insufficient to promise inventory; a provisional inventory window is needed before customer intake and can be revised through the guarded workflow.
+- The approximate inventory count in the database documentation is context, not a hardcoded capacity; confirm the real count and hold duration during 6.1.
+- Proposed interval rule: inventory is unavailable from the start up to, but not including, the return time; any required turnaround buffer is included before that return time. Finalize this in 6.1 before implementing overlap checks.
+- Event date alone is insufficient to promise inventory. Establish a complete inventory window before checking or reserving capacity, not before accepting an inquiry; revise it through the guarded workflow.
 - Each numbered piece receives its own detailed implementation plan before coding, including any business-rule decisions left open above.
-- This breakdown does not mark Phase 4.8 validation complete; finish that validation before implementing Phase 5.
-
-# 6. Customer Intake Form
-
-Once Mom confirms availability and the customer says yes, generate a private form link so the customer can provide all the official contact, venue, delivery, pickup, and rental details.
+- Build on the completed Phase 4 foundation and Phase 5 inquiry workflow; retain their regression coverage as inventory behavior is added.
 
 # 7. Pricing System
 
-Formalize Mom’s pricing rules, calculate a suggested price, flag unprofitable/small deliveries, and let Mom override the recommendation.
+Use Mom-reviewed inquiry details to formalize pricing rules, calculate a suggested price, flag unprofitable/small deliveries, and let Mom override the recommendation. Read current working booking/customer/venue values; original intake answers remain a historical snapshot.
 
 # 8. Quotes
 
-Turn pricing into a clean customer quote, allow revisions, send it, track acceptance/expiration, and preserve old quote versions.
+Turn pricing into a clean customer quote attached to the existing inquiry/booking, allow revisions, send it, track acceptance/expiration, and preserve old quote versions. Keep the same booking identity through quote acceptance and confirmation, and keep active quote work visible in the workspace.
 
 # 9. Payments / Dad Workflow
 
@@ -213,7 +283,7 @@ Generate contracts from booking data, send them electronically for signature, st
 
 # 11. Automatic Confirmation Logic
 
-When the signed contract and deposit are received, automatically mark the rental confirmed and convert the temporary hold into a real reservation.
+When the signed contract and required deposit are received/verified, automatically mark the existing inquiry/booking confirmed. Enforce inventory commitment rules agreed in Phase 6, including a fresh transactional capacity check and conversion of an active hold when applicable. Do not require every inquiry to pass through a hold or create another booking at confirmation.
 
 # 12. Booking Changes + History
 
@@ -249,7 +319,7 @@ Revenue, number of rentals, outstanding balances, average booking size, busiest 
 
 # 20. Testing + Hardening
 
-Run fake bookings through every weird scenario, tighten RLS, test permissions, test mobile, handle failures, backups, error states, and security.
+Run public and staff-entered inquiries through review → quote → acceptance → contract/deposit → confirmation, including existing Phase 4 records. Test clarification, retries, failures, permissions, mobile behavior, backups, error states, and security throughout.
 
 # 21. Historical Data + Real Future Bookings
 
