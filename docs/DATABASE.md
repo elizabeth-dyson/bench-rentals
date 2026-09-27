@@ -1325,6 +1325,16 @@ Authenticated
 
 Do not introduce admin/operations/payment roles unless this architecture is explicitly reconsidered later.
 
+## Browser session restoration
+
+The Streamlit app persists only the Supabase refresh token in a browser cookie so
+an authenticated user can refresh or directly reopen an internal route without
+signing in again. The cookie is same-site, becomes Secure on HTTPS, expires after
+30 days, and is rotated through Supabase whenever a new Streamlit session is
+restored. Logout revokes the Supabase session and removes the cookie. The app
+still creates a separate Supabase client for each Streamlit session; authenticated
+clients and access tokens are never cached globally.
+
 ---
 
 # Customer Access

@@ -3,21 +3,25 @@ from typing import Any
 import streamlit as st
 
 from components.presentation import render_wordmark
+from services.auth_session import (
+    USER_SESSION_KEY,
+    allow_auth_restoration,
+    block_auth_restoration,
+    queue_auth_cookie_clear,
+    queue_auth_cookie_write,
+)
 from services.supabase import clear_supabase_client, get_supabase_client
 from utils.scrolling import request_scroll_to_top
 
 
-_USER_SESSION_KEY = "authenticated_user"
-
-
 def is_authenticated() -> bool:
     """Return whether this Streamlit session has an authenticated user."""
-    return st.session_state.get(_USER_SESSION_KEY) is not None
+    return st.session_state.get(USER_SESSION_KEY) is not None
 
 
 def get_authenticated_user() -> Any | None:
     """Return the authenticated Supabase user, if present."""
-    return st.session_state.get(_USER_SESSION_KEY)
+    return st.session_state.get(USER_SESSION_KEY)
 
 
 def get_authenticated_user_display_name() -> str:
@@ -65,7 +69,9 @@ def render_login() -> None:
         feedback.error("We couldn't sign you in. Check your email and password and try again.")
         return
 
-    st.session_state[_USER_SESSION_KEY] = response.user
+    allow_auth_restoration()
+    st.session_state[USER_SESSION_KEY] = response.user
+    queue_auth_cookie_write(response.session)
     request_scroll_to_top()
     st.rerun()
 
@@ -79,12 +85,14 @@ def logout() -> None:
         # Local state must still be cleared if the network request fails.
         pass
     finally:
-        st.session_state.pop(_USER_SESSION_KEY, None)
+        st.session_state.pop(USER_SESSION_KEY, None)
         for key in list(st.session_state):
             if key.startswith(("lead_", "edit_", "booking_search_")):
                 del st.session_state[key]
         st.query_params.clear()
         clear_supabase_client()
+        block_auth_restoration()
+        queue_auth_cookie_clear()
         request_scroll_to_top()
 
 

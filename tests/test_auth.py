@@ -10,6 +10,8 @@ class LogoutTests(unittest.TestCase):
         clear_client = patch("components.auth.clear_supabase_client").start()
         get_client = patch("components.auth.get_supabase_client").start()
         request_scroll = patch("components.auth.request_scroll_to_top").start()
+        block_restore = patch("components.auth.block_auth_restoration").start()
+        clear_cookie = patch("components.auth.queue_auth_cookie_clear").start()
         self.addCleanup(patch.stopall)
         client = MagicMock()
         get_client.return_value = client
@@ -32,6 +34,8 @@ class LogoutTests(unittest.TestCase):
         self.assertEqual(streamlit.session_state["unrelated"], "keep")
         self.assertEqual(streamlit.query_params, {})
         clear_client.assert_called_once_with()
+        block_restore.assert_called_once_with()
+        clear_cookie.assert_called_once_with()
         request_scroll.assert_called_once_with()
 
 
