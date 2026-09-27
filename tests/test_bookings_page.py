@@ -149,7 +149,7 @@ class BookingsPageTests(unittest.TestCase):
 
     def test_blank_search_submission_activates_all_bookings_view(self):
         self.streamlit.text_input.return_value = ""
-        self.streamlit.selectbox.return_value = None
+        self.streamlit.multiselect.return_value = []
         self.streamlit.date_input.return_value = ()
         self.streamlit.form_submit_button.return_value = True
 
@@ -163,8 +163,34 @@ class BookingsPageTests(unittest.TestCase):
         self.list_active_leads.assert_not_called()
         self.list_bookings.assert_not_called()
 
+    def test_search_submission_accepts_multiple_stages(self):
+        self.streamlit.text_input.return_value = ""
+        self.streamlit.multiselect.return_value = ["lost", "cancelled"]
+        self.streamlit.date_input.return_value = ()
+        self.streamlit.form_submit_button.return_value = True
+
+        render_bookings()
+
+        self.assertEqual(
+            self.streamlit.session_state["booking_search_filters"],
+            BookingFilters(stages=("lost", "cancelled")),
+        )
+        self.streamlit.rerun.assert_called_once_with()
+
+    def test_search_submission_rejects_unknown_stage(self):
+        self.streamlit.text_input.return_value = ""
+        self.streamlit.multiselect.return_value = ["not-a-stage"]
+        self.streamlit.date_input.return_value = ()
+        self.streamlit.form_submit_button.return_value = True
+
+        render_bookings()
+
+        self.streamlit.error.assert_called_once_with("Choose valid booking stages.")
+        self.assertNotIn("booking_search_filters", self.streamlit.session_state)
+        self.streamlit.rerun.assert_not_called()
+
     def test_search_mode_renders_filtered_booking_results(self):
-        filters = BookingFilters(search_text="liz", stage="lost")
+        filters = BookingFilters(search_text="liz", stages=("lost", "cancelled"))
         self.streamlit.session_state["booking_search_filters"] = filters
         all_bookings = [
             self._lead("BR-2027-001", "2027-06-14", 1, "Liz")
@@ -218,7 +244,7 @@ class BookingsPageTests(unittest.TestCase):
             {
                 "booking_search_filters": BookingFilters(search_text="liz"),
                 "booking_search_text": "liz",
-                "booking_search_stage": None,
+                "booking_search_stages": ["lost", "cancelled"],
                 "booking_search_dates": (),
             }
         )
@@ -242,7 +268,7 @@ class BookingsPageTests(unittest.TestCase):
 
     def test_rejects_incomplete_search_date_range(self):
         self.streamlit.text_input.return_value = ""
-        self.streamlit.selectbox.return_value = None
+        self.streamlit.multiselect.return_value = []
         self.streamlit.date_input.return_value = (date(2027, 6, 14),)
         self.streamlit.form_submit_button.return_value = True
 

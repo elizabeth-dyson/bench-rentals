@@ -52,6 +52,7 @@ from utils.scrolling import request_scroll_to_top
 _SEARCH_FILTERS_KEY = "booking_search_filters"
 _SEARCH_WIDGET_KEYS = (
     "booking_search_text",
+    "booking_search_stages",
     "booking_search_stage",
     "booking_search_dates",
 )
@@ -169,8 +170,8 @@ def _render_search_controls() -> bool:
         initial_filters.search_text,
     )
     st.session_state.setdefault(
-        "booking_search_stage",
-        initial_filters.stage,
+        "booking_search_stages",
+        list(initial_filters.stages),
     )
     st.session_state.setdefault(
         "booking_search_dates",
@@ -190,13 +191,12 @@ def _render_search_controls() -> bool:
                 key="booking_search_text",
                 persist_state="session",
             )
-            stage = st.selectbox(
-                "Stage",
-                [None, *BOOKING_STAGES],
-                format_func=lambda value: (
-                    "All stages" if value is None else format_booking_stage(value)
-                ),
-                key="booking_search_stage",
+            stages = st.multiselect(
+                "Stages",
+                BOOKING_STAGES,
+                format_func=format_booking_stage,
+                placeholder="All stages",
+                key="booking_search_stages",
                 persist_state="session",
             )
             date_range = st.date_input(
@@ -216,8 +216,10 @@ def _render_search_controls() -> bool:
         if dates is None:
             st.error("Choose both a start and end date, or clear the date range.")
             return False
-        if stage is not None and stage not in BOOKING_STAGES:
-            st.error("Choose a valid booking stage.")
+        if not isinstance(stages, (list, tuple)) or any(
+            stage not in BOOKING_STAGES for stage in stages
+        ):
+            st.error("Choose valid booking stages.")
             return False
 
         start_date, end_date = dates
@@ -227,7 +229,7 @@ def _render_search_controls() -> bool:
 
         st.session_state[_SEARCH_FILTERS_KEY] = BookingFilters(
             search_text=search_text.strip(),
-            stage=stage,
+            stages=tuple(stages),
             start_date=start_date,
             end_date=end_date,
         )
@@ -1162,4 +1164,3 @@ def _phone_link_target(value: str | None) -> str | None:
         return None
     prefix = "+" if value.strip().startswith("+") else ""
     return f"tel:{prefix}{digits}"
-

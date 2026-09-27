@@ -236,8 +236,13 @@ class BookingFilterTests(unittest.TestCase):
             [],
         )
 
-    def test_combines_exact_stage_and_inclusive_date_filters(self):
+    def test_combines_multiple_stages_and_inclusive_date_filters(self):
         other_stage = {**self.booking, "booking_number": "other", "stage": "lost"}
+        excluded_stage = {
+            **self.booking,
+            "booking_number": "excluded",
+            "stage": "cancelled",
+        }
         before_range = {
             **self.booking,
             "booking_number": "before",
@@ -255,20 +260,27 @@ class BookingFilterTests(unittest.TestCase):
         }
         filters = BookingFilters(
             search_text="liz",
-            stage="lead",
+            stages=("lead", "lost"),
             start_date=date(2027, 6, 20),
             end_date=date(2027, 6, 30),
         )
 
         results = filter_bookings(
-            [malformed, end_boundary, before_range, other_stage, self.booking],
+            [
+                malformed,
+                end_boundary,
+                before_range,
+                other_stage,
+                excluded_stage,
+                self.booking,
+            ],
             filters,
             self.today,
         )
 
         self.assertEqual(
             [booking["booking_number"] for booking in results],
-            ["BR-2027-014", "boundary"],
+            ["other", "BR-2027-014", "boundary"],
         )
 
     def test_orders_upcoming_then_past_and_problem_records(self):

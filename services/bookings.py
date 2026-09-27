@@ -92,7 +92,7 @@ class BookingFilters:
     """Applied criteria for the all-bookings workspace."""
 
     search_text: str = ""
-    stage: str | None = None
+    stages: tuple[str, ...] = ()
     start_date: date | None = None
     end_date: date | None = None
 
@@ -209,7 +209,7 @@ def _booking_matches_filters(
     booking: BookingRecord,
     filters: BookingFilters,
 ) -> bool:
-    if filters.stage and booking.get("stage") != filters.stage:
+    if filters.stages and booking.get("stage") not in filters.stages:
         return False
 
     event_date = _parse_event_date(booking.get("event_date"))
