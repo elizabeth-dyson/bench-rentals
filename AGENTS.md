@@ -104,6 +104,10 @@ Do not assume either approach has been selected.
   verification instructions. Keep `docs/DATABASE.md` aligned with deployed changes
   and clearly label changes that remain pending installation. Do not recreate the
   database or introduce a migration framework just to complete an unrelated task.
+- The user runs Supabase SQL manually. Prepare the SQL files and give the exact
+  copy/paste execution order, distinguishing installation from inspection and
+  test-only scripts. Do not execute SQL against Supabase unless the user explicitly
+  requests it. Keep deployment status pending until the user confirms execution.
 
 ## Verify proportionately
 

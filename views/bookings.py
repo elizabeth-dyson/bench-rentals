@@ -6,6 +6,7 @@ from typing import Any
 from urllib.parse import quote, urlparse
 
 import streamlit as st
+from supabase import Client
 
 from components.presentation import render_booking_summary, render_stage_badge
 from services.bookings import (
@@ -37,6 +38,7 @@ from services.leads import (
     validate_lead_disposition,
     validate_lead_input,
 )
+from services.supabase import get_supabase_client
 from utils.formatting import (
     format_bench_count as _format_bench_count,
     format_booking_date,
@@ -334,7 +336,7 @@ def _render_create_lead_form() -> None:
         )
         st.markdown("#### Notes")
         customer_notes = st.text_area(
-            "Customer notes (optional)",
+            "Rental notes (optional)",
             key="lead_customer_notes",
         )
         internal_notes = st.text_area(
@@ -384,6 +386,14 @@ def _render_create_lead_form() -> None:
     st.session_state["lead_flow_step"] = "review"
     request_scroll_to_top()
     st.rerun()
+
+
+def _lead_write_client() -> Client:
+    """Obtain the session client at the UI boundary, preserving recoverable errors."""
+    try:
+        return get_supabase_client()
+    except Exception as error:
+        raise LeadServiceError("Unable to connect to the booking service.") from error
 
 
 def _render_lead_review() -> None:
@@ -443,7 +453,7 @@ def _render_lead_review() -> None:
     )
     try:
         with st.spinner("Creating lead..."):
-            result = create_lead(reviewed_lead)
+            result = create_lead(reviewed_lead, client=_lead_write_client())
     except LeadServiceError:
         st.error("The lead couldn't be created. Please try again.")
         return
@@ -792,7 +802,7 @@ def _render_edit_lead(booking: BookingRecord) -> None:
         )
         st.markdown("#### Notes")
         customer_notes = st.text_area(
-            "Customer notes (optional)", key="edit_customer_notes"
+            "Rental notes (optional)", key="edit_customer_notes"
         )
         internal_notes = st.text_area(
             "Internal notes (optional)", key="edit_internal_notes"
@@ -858,7 +868,7 @@ def _render_edit_lead(booking: BookingRecord) -> None:
 
     try:
         with st.spinner("Saving changes..."):
-            result = update_lead(draft)
+            result = update_lead(draft, client=_lead_write_client())
     except LeadServiceError:
         st.error("The lead couldn't be updated. Please try again.")
         return
@@ -1116,7 +1126,7 @@ def _render_event_details(booking: BookingRecord) -> None:
 def _render_notes(booking: BookingRecord) -> None:
     with st.container(border=True):
         st.subheader("Notes")
-        st.markdown("**Customer notes**")
+        st.markdown("**Rental notes**")
         st.write(_display_or_fallback(booking.get("customer_notes")))
         st.markdown("**Internal notes**")
         st.write(_display_or_fallback(booking.get("internal_notes")))

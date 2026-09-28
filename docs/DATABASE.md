@@ -6,6 +6,50 @@ The purpose of this file is to give developers and coding agents a reliable refe
 
 > **Important:** The database was initially created manually through the Supabase UI, with additional constraints and indexes added through the SQL editor. Treat the existing Supabase database as the source of truth if this document and the live schema ever disagree.
 
+> **Phase 5.1 deployment status:** Shared inquiry code and SQL are implemented
+> locally. The user installed all three SQL files; installation was verified from
+> the full post-installation report on 2026-09-28. The columns, constraints,
+> enabled triggers, and installed function definitions match the changes below.
+> Database integration tests and desktop/phone workflow checks remain **pending**.
+> See [Shared inquiry model](INQUIRY_MODEL.md) for the field
+> mapping, snapshot contract, schema differences, installation order, and checks.
+
+## Installed Phase 5.1 schema changes
+
+The post-installation inspection covers seven tables, 103 columns, 35 constraints,
+seven authenticated-only RLS policies, two enabled submission preservation
+triggers, and four functions. All installed function bodies match the local SQL
+files, including the unchanged disposition RPC. RLS settings, policies, and table
+grants match the pre-installation report. Existing `bookings.created_by`, `intake_links.created_by`,
+and `intake_submissions.reviewed_by` reference `auth.users(id)` with ON UPDATE
+CASCADE and ON DELETE SET NULL; isolated tests must use a real synthetic Auth
+user. Table grants include `anon`, but there is no anonymous row-access policy.
+RLS does not govern TRUNCATE; the installed submission preservation trigger also
+covers that operation. Existing grants are not changed by Phase 5.1.
+
+- `bookings`: added nullable `entry_method` (`public_form` / `staff_entered`) and
+  `timing_notes`. Existing origins remain NULL; the revised `create_lead` sets
+  `staff_entered`. Referral `source` remains a separate field.
+- `intake_submissions`: added nullable `entry_method` and `submitted_by` UUID.
+  Public origin requires NULL attribution, staff origin requires attribution,
+  and legacy/unknown origin retains both NULL. Keep `booking_id` required and
+  the existing `(booking_id, submission_number)` unique constraint.
+- `venues`: allow NULL address line 1, city, state, and postal code; removed the
+  automatic `NE` state default. Existing values are preserved.
+- Submission triggers prevent changes to original answers/provenance, deletion,
+  and truncation. Review metadata remains editable. Direct authenticated writes
+  are covered; no new anonymous grants or public endpoint are introduced.
+- `customers.notes` is customer-wide staff context; `bookings.customer_notes`
+  is rental-specific requests; `bookings.internal_notes` is staff rental context.
+  Revised lead RPCs write rental notes only to the booking. Historical copied
+  notes remain untouched. Working-record edits never rewrite original answers.
+
+Installed on 2026-09-28 in this order: `supabase/inquiry_model.sql`,
+`supabase/create_lead_rpc.sql`, then `supabase/update_lead_rpc.sql`.
+This verifies installation metadata and definitions, not execution of the
+isolated database integration tests or a live application smoke test.
+The exact steps and expected results are in [the installation guide](INQUIRY_MODEL.md#installation-and-verification).
+
 ---
 
 ## General Conventions
@@ -171,11 +215,11 @@ This allows recurring venues to retain delivery/access notes and potentially del
 |---|---|---|
 | `id` | `uuid` | PK, NOT NULL, default UUID |
 | `name` | `text` | Nullable |
-| `address_line_1` | `text` | NOT NULL |
+| `address_line_1` | `text` | Nullable |
 | `address_line_2` | `text` | Nullable |
-| `city` | `text` | NOT NULL |
-| `state` | `text` | NOT NULL, default `'NE'` |
-| `postal_code` | `text` | NOT NULL |
+| `city` | `text` | Nullable |
+| `state` | `text` | Nullable, no default |
+| `postal_code` | `text` | Nullable |
 | `latitude` | `numeric(9,6)` | Nullable |
 | `longitude` | `numeric(9,6)` | Nullable |
 | `distance_miles` | `numeric(7,2)` | Nullable |
@@ -204,6 +248,7 @@ A record may begin as a serious lead and eventually become a completed rental.
 | `venue_id` | `uuid` | Nullable, FK → `venues.id` |
 | `stage` | `text` | NOT NULL, default `'lead'` |
 | `source` | `text` | NOT NULL, default `'facebook_marketplace'` |
+| `entry_method` | `text` | Nullable; `public_form` or `staff_entered` |
 | `event_type` | `text` | Nullable |
 | `event_date` | `date` | NOT NULL |
 | `requested_bench_count` | `integer` | NOT NULL |
@@ -215,6 +260,7 @@ A record may begin as a serious lead and eventually become a completed rental.
 | `event_start_at` | `timestamptz` | Nullable |
 | `pickup_at` | `timestamptz` | Nullable |
 | `rehearsal_at` | `timestamptz` | Nullable |
+| `timing_notes` | `text` | Nullable |
 | `has_rehearsal_use` | `boolean` | NOT NULL, default `false` |
 | `is_overnight` | `boolean` | NOT NULL, default `false` |
 | `delivery_method` | `text` | Nullable |
@@ -460,6 +506,8 @@ This provides an audit trail even if normalized booking/customer fields are late
 | `booking_id` | `uuid` | NOT NULL, FK → `bookings.id` |
 | `intake_link_id` | `uuid` | Nullable, FK → `intake_links.id` |
 | `submission_number` | `integer` | NOT NULL, default `1` |
+| `entry_method` | `text` | Nullable; `public_form` or `staff_entered` |
+| `submitted_by` | `uuid` | Nullable; required for `staff_entered`, otherwise NULL; no Auth FK |
 | `submitted_data` | `jsonb` | NOT NULL |
 | `submitted_at` | `timestamptz` | NOT NULL, default `now()` |
 | `review_status` | `text` | NOT NULL, default `'pending'` |
@@ -1439,6 +1487,12 @@ The existing schema is the baseline architecture for the project.
 
 ## `create_lead`
 
+**Installed Phase 5.1 revision (2026-09-28):** requires `supabase/inquiry_model.sql`
+first on a new database. It sets `bookings.entry_method = 'staff_entered'`
+and writes rental notes only to `bookings.customer_notes`. It never writes or
+clears `customers.notes`, including when reusing a customer. Its signature and
+return shape remain unchanged; it does not yet create intake submissions.
+
 Phase 4.3 adds an authenticated `SECURITY INVOKER` function that creates a lead
 as one PostgreSQL transaction. It reuses or creates the customer, maintains the
 Facebook identity, generates a `BR-{event year}-{sequence}` booking number,
@@ -1459,6 +1513,10 @@ verification should be performed through the authenticated application after
 installation so the transaction runs under the same RLS context as normal use.
 
 ## `update_lead`
+
+**Installed Phase 5.1 revision (2026-09-28):** the current SQL writes rental notes only to
+`bookings.customer_notes`. It preserves `customers.notes` and the booking's
+original `entry_method`. The RPC signature remains unchanged.
 
 Phase 4.5 adds an authenticated `SECURITY INVOKER` function that updates a
 lead and its shared customer as one transaction. It validates that the booking

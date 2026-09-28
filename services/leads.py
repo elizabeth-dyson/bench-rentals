@@ -1,19 +1,22 @@
 import re
 from dataclasses import dataclass
 from datetime import date
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from services.inquiries import (
+    ALLOWED_CONTACT_METHODS,
+    ALLOWED_SOURCES,
+    normalize_email,
+    normalize_facebook,
+    normalize_phone,
+    validate_contact_event,
+)
 from services.supabase import get_supabase_client
 
+if TYPE_CHECKING:
+    from supabase import Client
 
-ALLOWED_CONTACT_METHODS = {"email", "facebook", "phone", "text"}
-ALLOWED_SOURCES = {
-    "facebook_marketplace",
-    "facebook_referral",
-    "word_of_mouth",
-    "repeat_customer",
-    "other",
-}
+
 ALLOWED_DISPOSITION_STAGES = {"lead", "lost", "cancelled"}
 
 
@@ -89,61 +92,15 @@ class CustomerMatch:
     matched_on: tuple[str, ...]
 
 
-def normalize_email(value: str | None) -> str | None:
-    normalized = (value or "").strip().lower()
-    return normalized or None
-
-
-def normalize_phone(value: str | None) -> str | None:
-    normalized = re.sub(r"\D", "", value or "")
-    return normalized or None
-
-
-def normalize_facebook(value: str | None) -> str | None:
-    normalized = " ".join((value or "").strip().lower().split())
-    return normalized or None
-
-
 def validate_lead_input(lead: LeadCreateInput | LeadUpdateInput) -> list[str]:
-    errors: list[str] = []
-    email = normalize_email(lead.email)
-    phone = normalize_phone(lead.phone)
-    facebook = normalize_facebook(lead.facebook_identity)
-
-    if not lead.customer_name.strip():
-        errors.append("Enter the customer's name.")
-    if not isinstance(lead.event_date, date):
-        errors.append("Choose an event date.")
-    if (
-        not isinstance(lead.requested_bench_count, int)
-        or isinstance(lead.requested_bench_count, bool)
-        or lead.requested_bench_count < 1
-    ):
-        errors.append("Requested benches must be at least 1.")
+    errors = validate_contact_event(
+        customer_name=lead.customer_name, event_date=lead.event_date,
+        requested_bench_count=lead.requested_bench_count,
+        preferred_contact_method=lead.preferred_contact_method,
+        email=lead.email, phone=lead.phone, facebook_identity=lead.facebook_identity,
+    )
     if lead.source not in ALLOWED_SOURCES:
         errors.append("Choose a valid lead source.")
-    if lead.preferred_contact_method not in ALLOWED_CONTACT_METHODS:
-        errors.append("Choose a valid preferred contact method.")
-    if email and not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", email):
-        errors.append("Enter a valid email address.")
-    if phone and not 7 <= len(phone) <= 15:
-        errors.append("Enter a valid phone number.")
-    if not any((email, phone, facebook)):
-        errors.append("Enter at least one contact method.")
-
-    available_methods = set()
-    if email:
-        available_methods.add("email")
-    if phone:
-        available_methods.update(("text", "phone"))
-    if facebook:
-        available_methods.add("facebook")
-    if (
-        lead.preferred_contact_method in ALLOWED_CONTACT_METHODS
-        and lead.preferred_contact_method not in available_methods
-    ):
-        errors.append("The preferred contact method must have contact information.")
-
     return errors
 
 
@@ -237,7 +194,7 @@ def find_customer_matches(
     return sorted(matches, key=lambda match: match.display_name.casefold())
 
 
-def create_lead(lead: LeadCreateInput) -> LeadCreateResult:
+def create_lead(lead: LeadCreateInput, *, client: "Client") -> LeadCreateResult:
     errors = validate_lead_input(lead)
     if errors:
         raise ValueError(" ".join(errors))
@@ -261,7 +218,7 @@ def create_lead(lead: LeadCreateInput) -> LeadCreateResult:
     }
 
     try:
-        response = get_supabase_client().rpc("create_lead", payload).execute()
+        response = client.rpc("create_lead", payload).execute()
         data = response.data
         row = data[0] if isinstance(data, list) and data else data
         if not isinstance(row, dict):
@@ -279,7 +236,7 @@ def create_lead(lead: LeadCreateInput) -> LeadCreateResult:
     )
 
 
-def update_lead(lead: LeadUpdateInput) -> LeadUpdateResult:
+def update_lead(lead: LeadUpdateInput, *, client: "Client") -> LeadUpdateResult:
     """Atomically update an existing lead and its shared customer."""
     errors = validate_lead_input(lead)
     if errors:
@@ -304,7 +261,7 @@ def update_lead(lead: LeadUpdateInput) -> LeadUpdateResult:
     }
 
     try:
-        response = get_supabase_client().rpc("update_lead", payload).execute()
+        response = client.rpc("update_lead", payload).execute()
         data = response.data
         row = data[0] if isinstance(data, list) and data else data
         if not isinstance(row, dict) or not row.get("booking_number"):

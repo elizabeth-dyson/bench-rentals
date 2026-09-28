@@ -1,3 +1,5 @@
+-- Phase 5.1 note-separation revision: installed definition verified 2026-09-28.
+-- Rental notes belong only to bookings; preserve customers.notes and entry_method.
 -- Run this entire file in the Supabase SQL Editor for the Bench Rental project.
 -- The function is SECURITY INVOKER, so existing RLS policies still apply.
 
@@ -201,7 +203,6 @@ begin
         email = v_email,
         phone = v_phone,
         preferred_contact_method = p_preferred_contact_method,
-        notes = nullif(btrim(p_customer_notes), ''),
         updated_at = now()
     where id = v_customer_id;
 
