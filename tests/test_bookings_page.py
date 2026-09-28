@@ -29,6 +29,8 @@ class BookingsPageTests(unittest.TestCase):
         self.find_customer_matches = patch(
             "views.bookings.find_customer_matches"
         ).start()
+        self.client = MagicMock()
+        patch("views.bookings.get_supabase_client", return_value=self.client).start()
         self.update_lead = patch("views.bookings.update_lead").start()
         self.set_lead_disposition = patch(
             "views.bookings.set_lead_disposition"

@@ -197,16 +197,14 @@ class CustomerMatchingTests(unittest.TestCase):
 
 
 class LeadCreationTests(unittest.TestCase):
-    @patch("services.leads.get_supabase_client")
-    def test_calls_rpc_and_returns_result(self, get_client):
+    def test_calls_rpc_and_returns_result(self):
         client = MagicMock()
         client.rpc.return_value.execute.return_value = SimpleNamespace(
             data=[{"booking_id": "booking-1", "booking_number": "BR-2027-001"}]
         )
-        get_client.return_value = client
         lead = valid_lead(existing_customer_id="customer-1")
 
-        result = create_lead(lead)
+        result = create_lead(lead, client=client)
 
         self.assertEqual(result.booking_number, "BR-2027-001")
         rpc_name, payload = client.rpc.call_args.args
@@ -214,24 +212,22 @@ class LeadCreationTests(unittest.TestCase):
         self.assertEqual(payload["p_existing_customer_id"], "customer-1")
         self.assertEqual(payload["p_event_date"], "2027-06-14")
 
-    @patch("services.leads.get_supabase_client")
-    def test_translates_malformed_rpc_response(self, get_client):
-        get_client.return_value.rpc.return_value.execute.return_value = SimpleNamespace(
+    def test_translates_malformed_rpc_response(self):
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = SimpleNamespace(
             data=[]
         )
         with self.assertRaises(LeadServiceError) as context:
-            create_lead(valid_lead())
+            create_lead(valid_lead(), client=client)
         self.assertIsInstance(context.exception.__cause__, ValueError)
 
 
 class LeadUpdateTests(unittest.TestCase):
-    @patch("services.leads.get_supabase_client")
-    def test_calls_update_rpc_and_returns_booking_number(self, get_client):
+    def test_calls_update_rpc_and_returns_booking_number(self):
         client = MagicMock()
         client.rpc.return_value.execute.return_value = SimpleNamespace(
             data=[{"booking_number": "BR-2027-001"}]
         )
-        get_client.return_value = client
         lead = LeadUpdateInput(
             booking_number="BR-2027-001",
             customer_id="customer-1",
@@ -243,7 +239,7 @@ class LeadUpdateTests(unittest.TestCase):
             email=" JAMIE@example.com ",
         )
 
-        result = update_lead(lead)
+        result = update_lead(lead, client=client)
 
         self.assertEqual(result.booking_number, "BR-2027-001")
         rpc_name, payload = client.rpc.call_args.args
@@ -252,9 +248,9 @@ class LeadUpdateTests(unittest.TestCase):
         self.assertEqual(payload["p_event_date"], "2028-07-01")
         self.assertEqual(payload["p_email"], "jamie@example.com")
 
-    @patch("services.leads.get_supabase_client")
-    def test_update_translates_malformed_response(self, get_client):
-        get_client.return_value.rpc.return_value.execute.return_value = SimpleNamespace(
+    def test_update_translates_malformed_response(self):
+        client = MagicMock()
+        client.rpc.return_value.execute.return_value = SimpleNamespace(
             data=[]
         )
         lead = LeadUpdateInput(
@@ -269,7 +265,7 @@ class LeadUpdateTests(unittest.TestCase):
         )
 
         with self.assertRaises(LeadServiceError) as context:
-            update_lead(lead)
+            update_lead(lead, client=client)
 
         self.assertIsInstance(context.exception.__cause__, ValueError)
 

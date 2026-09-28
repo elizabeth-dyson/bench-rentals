@@ -1,3 +1,5 @@
+-- Requires inquiry_model.sql first. Installed definition verified 2026-09-28.
+-- Rental notes belong only to bookings; preserve customers.notes.
 -- Run this entire file in the Supabase SQL Editor for the Bench Rental project.
 -- The function is SECURITY INVOKER, so existing RLS policies still apply.
 
@@ -70,10 +72,10 @@ begin
 
     if p_existing_customer_id is null then
         insert into public.customers (
-            preferred_name, email, phone, preferred_contact_method, notes
+            preferred_name, email, phone, preferred_contact_method
         ) values (
             btrim(p_customer_name), v_email, v_phone,
-            p_preferred_contact_method, nullif(btrim(p_customer_notes), '')
+            p_preferred_contact_method
         )
         returning id into v_customer_id;
     else
@@ -82,7 +84,6 @@ begin
             email = coalesce(v_email, email),
             phone = coalesce(v_phone, phone),
             preferred_contact_method = p_preferred_contact_method,
-            notes = coalesce(nullif(btrim(p_customer_notes), ''), notes),
             updated_at = now()
         where id = p_existing_customer_id and not is_archived
         returning id into v_customer_id;
@@ -124,13 +125,13 @@ begin
     insert into public.bookings (
         booking_number, primary_customer_id, stage, source, event_type,
         event_date, requested_bench_count, facebook_conversation_url,
-        customer_notes, internal_notes, created_by
+        customer_notes, internal_notes, created_by, entry_method
     ) values (
         v_booking_number, v_customer_id, 'lead', p_source,
         nullif(btrim(p_event_type), ''), p_event_date,
         p_requested_bench_count, nullif(btrim(p_facebook_conversation_url), ''),
         nullif(btrim(p_customer_notes), ''), nullif(btrim(p_internal_notes), ''),
-        auth.uid()
+        auth.uid(), 'staff_entered'
     )
     returning id into v_booking_id;
 

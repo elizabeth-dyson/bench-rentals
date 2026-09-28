@@ -103,6 +103,30 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 - Separate customer-wide notes, rental-specific notes, and internal notes instead of copying one field into both customer and booking records.
 - Record entry method (`public_form` or `staff_entered`) separately from referral source, such as Facebook or word of mouth.
 
+### 5.1 Agreed Requirements and Implementation Boundary
+
+- Only name, event date, positive bench count, and a usable contact method are
+  required. Venue/address, event type, delivery preference, and timing may be
+  clarified before pricing.
+- Delivery preferences are family delivery, customer pickup, and unsure.
+  Existing third-party/other values on older records remain usable.
+- Capture optional structured delivery, setup, event-start, pickup, and rehearsal
+  timestamps plus timing notes in America/Chicago. Do not infer an inventory
+  window or confirmed appointment.
+- Allow partial venues without inventing an address or default state.
+- Implement the shared model and database foundation now, plus the existing
+  lead workflow's note-separation fix. Current forms label rental-specific notes
+  as “Rental notes”; customer-wide note editing remains deferred.
+- Preserve historical notes and unknown origins. New staff-created leads record
+  `staff_entered`, separately from referral source.
+- Public forms, full inquiry persistence/snapshot creation, review, and expanded
+  staff entry remain 5.2–5.5. Do not fabricate submissions for older leads.
+- Local implementation is present. The user installed the SQL on 2026-09-28;
+  the full post-installation report verifies the expected schema, triggers,
+  function bodies, and unchanged access settings. Isolated database integration
+  tests and desktop/phone workflow checks remain pending; see `docs/DATABASE.md`
+  and `docs/INQUIRY_MODEL.md` for installation and verification instructions.
+
 ## 5.2 Send the Form Without Creating a Lead
 
 - Give Mom a “Copy inquiry link” action to share through existing conversations without entering customer details first.
