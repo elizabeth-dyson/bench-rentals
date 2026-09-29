@@ -16,6 +16,13 @@ The purpose of this file is to give developers and coding agents a reliable refe
 
 ## Installed Phase 5.1 schema changes
 
+**Phase 5.3 is prepared, not installed/verified:** see
+[Inquiry persistence](INQUIRY_PIPELINE.md) for nullable submission request
+UUID/fingerprint/matching outcome, extended preservation, private SQL functions,
+authenticated staff wrappers, and the manual installation/test order. Existing
+RLS/table grants and legacy lead RPCs remain unchanged. Do not treat pending
+Phase 5.3 definitions as part of the verified live baseline below.
+
 The post-installation inspection covers seven tables, 103 columns, 35 constraints,
 seven authenticated-only RLS policies, two enabled submission preservation
 triggers, and four functions. All installed function bodies match the local SQL
