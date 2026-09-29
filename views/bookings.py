@@ -8,6 +8,7 @@ from urllib.parse import quote, urlparse
 import streamlit as st
 from supabase import Client
 
+from components.inquiry_link import render_configured_inquiry_link
 from components.presentation import render_booking_summary, render_stage_badge
 from services.bookings import (
     BOOKING_STAGES,
@@ -98,6 +99,7 @@ def _render_bookings_workspace() -> None:
         with st.container():
             st.title("Bookings")
             st.caption("Keep every inquiry moving, from first contact to next steps.")
+        render_configured_inquiry_link(key="bookings_inquiry_link")
         add_lead = st.button(
             "Add lead", icon=":material/add:", type="primary", width="content"
         )

@@ -68,6 +68,7 @@ class HomePageTests(unittest.TestCase):
     def setUp(self):
         self.st = patch("views.home.st").start()
         patch("components.presentation.st", self.st).start()
+        self.inquiry_link = patch("views.home.render_configured_inquiry_link").start()
         patch("views.home.get_authenticated_user_display_name", return_value="Liz").start()
         patch("views.home.get_business_date", return_value=TODAY).start()
         self.load = patch("views.home.list_active_leads", return_value=[]).start()
@@ -77,6 +78,7 @@ class HomePageTests(unittest.TestCase):
 
     def test_empty_home_shows_zero_counts_and_guidance(self):
         render_home()
+        self.inquiry_link.assert_called_once_with(key="home_inquiry_link")
         self.assertEqual([c.args[1] for c in self.st.metric.call_args_list], [0, 0, 0])
         self.st.info.assert_called_once()
 
@@ -85,6 +87,7 @@ class HomePageTests(unittest.TestCase):
         self.st.button.side_effect = [False, True]
         render_home()
         self.st.metric.assert_not_called()
+        self.inquiry_link.assert_called_once_with(key="home_inquiry_link")
         self.st.error.assert_called_once_with(
             "Your workspace couldn't be loaded. Please try again."
         )

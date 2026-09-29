@@ -1,6 +1,7 @@
 import streamlit as st
 
 from components.auth import get_authenticated_user_display_name
+from components.inquiry_link import render_configured_inquiry_link
 from components.presentation import render_booking_summary
 from services.bookings import BookingServiceError, get_business_date, list_active_leads
 from services.home import summarize_leads
@@ -14,6 +15,7 @@ def render_home() -> None:
         with st.container():
             st.title("Home")
             st.write(f"Welcome back, {get_authenticated_user_display_name()}.")
+        render_configured_inquiry_link(key="home_inquiry_link")
         if st.button("View bookings", icon=":material/event_note:"):
             _open_bookings()
             return
