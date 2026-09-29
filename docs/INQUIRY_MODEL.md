@@ -10,7 +10,8 @@ Supabase SQL. See [DATABASE.md](DATABASE.md) for the installed schema.
 ## Shared Python contract
 
 The separate Phase 5.3 submission service and SQL transaction are implemented;
-SQL installation and isolated verification remain pending. See
+the user's ending inspection verifies installation in the inspected project.
+Isolated behavioral/concurrency verification remains pending. See
 [Inquiry persistence](INQUIRY_PIPELINE.md) for matching, retries, follow-ups,
 and the manual installation order. Existing lead screens/RPCs still do not
 create snapshots.
@@ -50,8 +51,8 @@ No state/address defaults are invented. A partially supplied venue is retained.
 | Entry origin | New `entry_method`; never inferred from referral source |
 
 Unknown venues remain unlinked; partial venue rows are supported. Matching venues
-and reuse remain later review work. This mapping is implemented by the prepared
-Phase 5.3 writer, pending SQL installation and verification. Existing
+and reuse remain later review work. This mapping is implemented by the installed
+Phase 5.3 writer, pending behavioral/concurrency verification. Existing
 `third_party`/`other` delivery values remain untouched; new-answer validation
 does not restrict older records or the existing lead editor.
 
@@ -95,7 +96,8 @@ trusted execution context, not accept them as customer answers.
 
 Do not reconstruct historical snapshots from current working records. Existing
 create/edit RPCs still do not create intake submissions; the separate Phase 5.3
-operation provides atomic creation and retry protection after SQL installation.
+operation implements atomic creation and retry protection. Its installation has
+been inspected; isolated database behavior tests remain pending.
 
 ## Schema and compatibility
 

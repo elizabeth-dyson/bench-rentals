@@ -163,8 +163,9 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 
 ### 5.3 Agreed Behavior and Implementation Status
 
-- The shared backend is implemented locally. SQL installation, isolated database
-  integration, and two-session concurrency verification remain pending user runs.
+- The shared backend is implemented locally. The user's ending schema inspection
+  verifies SQL installation in the inspected project. Isolated database integration
+  and two-session concurrency verification remain pending user runs.
   See [Inquiry persistence](INQUIRY_PIPELINE.md) for contracts and installation order.
 - Reuse an active customer automatically only when every supplied contact resolves
   uniquely to that same customer. No matches creates a customer; partial,
@@ -186,7 +187,7 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
   grants, public route, private-link workflow, or service-role client is added.
 - Current Add lead and other screens keep their existing behavior until 5.5.
   Inquiry sharing stays disabled until 5.4. Phase 5.3 is not database-verified
-  complete until the isolated scripts pass and installation is confirmed.
+  complete until the isolated behavioral and concurrency scripts pass.
 
 ## 5.4 Customer Form and Access
 

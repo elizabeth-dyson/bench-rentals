@@ -1,9 +1,18 @@
 # Inquiry persistence — Phase 5.3
 
-**Status:** implemented locally; SQL installation, isolated database behavior,
-and two-session concurrency verification are pending user execution. The Phase
-5.1 baseline was inspected on 2026-09-28, not freshly inspected during this work.
-Mocked RPC tests do not verify SQL, transaction, or access behavior.
+**Status:** implemented locally; the user installed both SQL files, and their
+post-installation inspection confirms the expected definitions and metadata in
+the inspected project. The initial report matched the verified Phase 5.1 baseline.
+Isolated behavioral and two-session concurrency tests remain pending. The report
+does not identify whether the inspected project is production or a test project.
+Mocked RPC tests and schema inspection do not verify transaction/access behavior.
+
+The ending report contains 106 columns, 38 constraints, 20 indexes, two enabled
+preservation triggers, ten functions, and the owner-only `inquiry_private` schema.
+All seven new/revised function bodies match the local installers. Staff wrappers
+grant execution only to authenticated and the owner; private functions grant only
+the owner. Legacy RPC bodies, RLS settings, policies, and table grants match the
+initial report. This verifies installation, not successful execution of the saves.
 
 This phase adds backend operations only. Add lead still uses its existing RPC,
 without creating snapshots. Public routes, private links, anonymous submission,
@@ -155,6 +164,8 @@ without a new extension.
 ## Manual installation and verification
 
 You run all Supabase SQL; no scripts have been remotely installed by the agent.
+Installation in the inspected project is confirmed above. The procedure below
+also applies to preparing an isolated test project or another deployment target.
 
 1. **Inspect:** run `supabase/inspect_inquiry_schema.sql`. Compare its complete
    report with the installed 5.1 baseline. It now includes private schema ownership,
