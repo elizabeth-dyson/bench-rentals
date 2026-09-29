@@ -9,6 +9,13 @@ Supabase SQL. See [DATABASE.md](DATABASE.md) for the installed schema.
 
 ## Shared Python contract
 
+The separate Phase 5.3 submission service and SQL transaction are implemented;
+the user's ending inspection verifies installation in the inspected project.
+Isolated behavioral/concurrency verification remains pending. See
+[Inquiry persistence](INQUIRY_PIPELINE.md) for matching, retries, follow-ups,
+and the manual installation order. Existing lead screens/RPCs still do not
+create snapshots.
+
 `services/inquiries.py` contains frozen `InquiryAnswers`, `VenueInput`, and
 `StaffInquiryContext` dataclasses with no Streamlit or Supabase imports.
 `validate_inquiry_input` returns validation messages; `normalize_inquiry` and
@@ -44,8 +51,8 @@ No state/address defaults are invented. A partially supplied venue is retained.
 | Entry origin | New `entry_method`; never inferred from referral source |
 
 Unknown venues remain unlinked; partial venue rows are supported. Matching venues
-and writing the full inquiry are Phase 5.3/5.5 work. This mapping is the contract
-for that future pipeline, not an implemented multi-table writer. Existing
+and reuse remain later review work. This mapping is implemented by the installed
+Phase 5.3 writer, pending behavioral/concurrency verification. Existing
 `third_party`/`other` delivery values remain untouched; new-answer validation
 does not restrict older records or the existing lead editor.
 
@@ -88,8 +95,9 @@ The future submission boundary must derive origin/staff attribution from its
 trusted execution context, not accept them as customer answers.
 
 Do not reconstruct historical snapshots from current working records. Existing
-create/edit RPCs still do not create intake submissions; atomic creation and
-retry protection remain Phase 5.3.
+create/edit RPCs still do not create intake submissions; the separate Phase 5.3
+operation implements atomic creation and retry protection. Its installation has
+been inspected; isolated database behavior tests remain pending.
 
 ## Schema and compatibility
 
