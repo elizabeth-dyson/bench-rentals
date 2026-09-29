@@ -20,6 +20,7 @@ class BookingsPageTests(unittest.TestCase):
     def setUp(self):
         self.streamlit = patch("views.bookings.st").start()
         patch("components.presentation.st", self.streamlit).start()
+        self.inquiry_link = patch("views.bookings.render_configured_inquiry_link").start()
         self.streamlit.session_state = {}
         self.streamlit.query_params = {}
         self.list_active_leads = patch("views.bookings.list_active_leads").start()
@@ -56,6 +57,7 @@ class BookingsPageTests(unittest.TestCase):
 
         render_bookings()
 
+        self.inquiry_link.assert_called_once_with(key="bookings_inquiry_link")
         self.streamlit.info.assert_called_once_with("No active leads.")
         self.assertFalse(any(
             item.kwargs.get("key", "").startswith("view_booking_")

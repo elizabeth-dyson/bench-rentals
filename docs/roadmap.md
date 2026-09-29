@@ -135,6 +135,22 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 - Do not require an availability check, hold, customer acceptance, or customer login before sending or submitting the initial form.
 - Leave automated messaging and delivery tracking to Phase 15; copying and manually sending the link is enough here.
 
+### 5.2 Implementation and Activation
+
+- A shared **Copy inquiry link** popover is implemented on Home and the Bookings
+  list, before database loading. It remains outside lead forms and booking detail.
+- The panel uses Streamlit's built-in copy icon and selectable plain-text URL.
+  It copies only the reusable URL; opening it does not imply copying or sending.
+- Optional top-level `PUBLIC_INQUIRY_URL` in Streamlit secrets explicitly enables
+  sharing. Missing/blank or invalid configuration disables the control. The URL
+  must be absolute HTTPS without credentials, queries, fragments, or whitespace.
+- Leave the setting unset until Phase 5.4. Verify the real public form while
+  signed out before enabling it; see README for activation and troubleshooting.
+- This phase creates no bookings, invitations, tokens, or submissions and makes
+  no schema, RPC, RLS, authentication, or public-route changes. No SQL is needed.
+- URL validation and rendering have automated coverage. Browser layout and actual
+  clipboard/manual-copy checks remain pending when no browser is connected.
+
 ## 5.3 One Creation Pipeline
 
 - Extend existing transactional creation so public submissions and staff entry share one underlying business operation and field validation.
