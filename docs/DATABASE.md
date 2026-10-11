@@ -16,6 +16,17 @@ The purpose of this file is to give developers and coding agents a reliable refe
 
 ## Installed Phase 5.1 schema changes
 
+**Phase 5.3 installation verified in the inspected project:** the user's ending
+report confirms three nullable submission columns (`request_id`,
+`request_fingerprint`, `customer_match_outcome`), three new constraints, extended
+preservation, four owner-only private functions, and two authenticated staff RPCs.
+All seven new/revised function bodies match the local SQL. The report totals
+106 columns, 38 constraints, 20 indexes, two enabled triggers, and ten functions.
+RLS settings/policies, table grants, and legacy lead RPC bodies are unchanged.
+The project environment was not identified; isolated behavioral/concurrency tests
+remain pending. See [Inquiry persistence](INQUIRY_PIPELINE.md) for contracts and
+the manual installation/test order. The historical Phase 5.1 inventory follows.
+
 The post-installation inspection covers seven tables, 103 columns, 35 constraints,
 seven authenticated-only RLS policies, two enabled submission preservation
 triggers, and four functions. All installed function bodies match the local SQL
@@ -508,6 +519,9 @@ This provides an audit trail even if normalized booking/customer fields are late
 | `submission_number` | `integer` | NOT NULL, default `1` |
 | `entry_method` | `text` | Nullable; `public_form` or `staff_entered` |
 | `submitted_by` | `uuid` | Nullable; required for `staff_entered`, otherwise NULL; no Auth FK |
+| `request_id` | `uuid` | Nullable; UNIQUE logical submission request ID; Phase 5.3 |
+| `request_fingerprint` | `text` | Nullable; paired with request ID, 64 lowercase hex characters; immutable |
+| `customer_match_outcome` | `text` | Nullable; `new_customer`, `reused_exact`, `selected_by_staff`, or `needs_review`; immutable |
 | `submitted_data` | `jsonb` | NOT NULL |
 | `submitted_at` | `timestamptz` | NOT NULL, default `now()` |
 | `review_status` | `text` | NOT NULL, default `'pending'` |

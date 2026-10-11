@@ -161,6 +161,34 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 - Reuse customer matching where appropriate, but do not expose existing customers or let public callers select arbitrary customer IDs or overwrite shared customer information. Route uncertain matches to staff review.
 - Attach follow-up information to existing Phase 4 bookings without changing their identifiers or creating another inquiry.
 
+### 5.3 Agreed Behavior and Implementation Status
+
+- The shared backend is implemented locally. The user's ending schema inspection
+  verifies SQL installation in the inspected project. Isolated database integration
+  and two-session concurrency verification remain pending user runs.
+  See [Inquiry persistence](INQUIRY_PIPELINE.md) for contracts and installation order.
+- Reuse an active customer automatically only when every supplied contact resolves
+  uniquely to that same customer. No matches creates a customer; partial,
+  conflicting, or ambiguous matches creates a separate customer needing review.
+- Automatic and explicit staff reuse preserve the entire customer profile and
+  identities. Store supplied answers and the original matching outcome for later
+  review. Customer-wide note editing and match resolution remain deferred.
+- Initial creation is atomic across customer/contact, optional partial venue,
+  lead booking, and original submission. Original answers precede normalization;
+  SQL derives and validates working values. No inventory/price/hold work is added.
+- Follow-ups contain complete answers and append pending snapshots without
+  replacing working records or prior review decisions. Accept new follow-ups only
+  on open leads; restore lost/cancelled leads first. Keep legacy IDs and origins.
+- Caller UUIDs, database fingerprints, unique constraints, and transaction locks
+  protect retries and version allocation. A completed request remains replayable
+  after closure. Different payload/context with the same key is a conflict.
+- Authenticated staff wrappers use the private shared SQL operation. Public-origin
+  behavior exists only privately for testing/future authorized wrappers; no anon
+  grants, public route, private-link workflow, or service-role client is added.
+- Current Add lead and other screens keep their existing behavior until 5.5.
+  Inquiry sharing stays disabled until 5.4. Phase 5.3 is not database-verified
+  complete until the isolated behavioral and concurrency scripts pass.
+
 ## 5.4 Customer Form and Access
 
 - Build a mobile-friendly form accessible without signing in to the internal application.

@@ -1,4 +1,4 @@
--- READ ONLY. Run before installing Phase 5.1 and again afterward.
+-- READ ONLY. Run before/after installing Phase 5.1 or Phase 5.3.
 -- Returns ONE result containing every inspection section, so copying the final
 -- SQL Editor result includes the whole report. No customer rows or credentials.
 with inspected_tables(table_name) as (
@@ -53,15 +53,28 @@ trigger_details as (
 ),
 rpc_details as (
     select p.oid::regprocedure::text as signature,
-           p.prosecdef as security_definer, p.proacl as permissions,
+           pg_get_userbyid(p.proowner) as owner,
+           p.prosecdef as security_definer, p.proacl as permissions, p.proconfig as settings,
            pg_get_functiondef(p.oid) as definition
     from pg_proc p
     join pg_namespace n on n.oid = p.pronamespace
-    where n.nspname = 'public' and p.proname in (
-        'create_lead', 'update_lead', 'set_lead_disposition', 'protect_intake_submission'
-    )
+    where (n.nspname = 'public' and p.proname in (
+        'create_lead', 'update_lead', 'set_lead_disposition', 'protect_intake_submission',
+        'create_staff_inquiry', 'append_staff_inquiry_submission'
+    )) or n.nspname = 'inquiry_private'
+),
+schema_details as (
+    select n.nspname as schema_name, pg_get_userbyid(n.nspowner) as owner, n.nspacl as permissions
+    from pg_namespace n where n.nspname = 'inquiry_private'
+),
+index_details as (
+    select i.schemaname, i.tablename, i.indexname, i.indexdef
+    from pg_indexes i join inspected_tables t on t.table_name = i.tablename
+    where i.schemaname = 'public'
 )
 select jsonb_pretty(jsonb_build_object(
+    'private_schemas', coalesce((select jsonb_agg(to_jsonb(d)) from schema_details d), '[]'::jsonb),
+    'indexes', coalesce((select jsonb_agg(to_jsonb(d) order by tablename, indexname) from index_details d), '[]'::jsonb),
     'columns', coalesce((select jsonb_agg(to_jsonb(d) order by table_name, ordinal_position)
                          from column_details d), '[]'::jsonb),
     'constraints', coalesce((select jsonb_agg(to_jsonb(d) order by table_name, conname)
