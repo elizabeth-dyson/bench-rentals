@@ -1,5 +1,5 @@
 import unittest
-from datetime import date
+from datetime import date, time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, PropertyMock, patch
@@ -78,6 +78,46 @@ class PublicInquiryPageTests(unittest.TestCase):
         click(app, "Start another inquiry")
         self.assertEqual(app.session_state["public_inquiry_draft"].session_id, session)
         self.assertEqual(app.text_input(key="inquiry_customer_name").value, "")
+
+    def test_delivery_and_pickup_are_only_timing_inputs_and_use_am_pm(self):
+        app = self.form()
+        self.assertEqual([item.label for item in app.time_input],
+                         ["Requested delivery time", "Requested pickup time"])
+        self.assertTrue(all(item.proto.format == "12h" for item in app.time_input))
+        app.date_input(key="inquiry_delivery_at_day").set_value(date(2020, 6, 13))
+        app.time_input(key="inquiry_delivery_at_time").set_value(time(9, 30))
+        app.date_input(key="inquiry_pickup_at_day").set_value(date(2020, 6, 15))
+        app.time_input(key="inquiry_pickup_at_time").set_value(time(17, 45))
+        click(app, "Review inquiry")
+        self.assertFalse(app.exception)
+        answers = app.session_state["public_inquiry_draft"].answers
+        self.assertEqual((answers.delivery_at.hour, answers.pickup_at.hour), (9, 17))
+        self.assertIsNone(answers.setup_complete_by)
+        self.assertIsNone(answers.event_start_at)
+        self.assertIsNone(answers.rehearsal_at)
+        self.assertIsNone(answers.timing_notes)
+        review = [item.value for item in app.text]
+        self.assertTrue(any("09:30 AM" in line for line in review))
+        self.assertTrue(any("05:45 PM" in line for line in review))
+        click(app, "Edit answers")
+        self.assertEqual(app.time_input(key="inquiry_delivery_at_time").value, time(9, 30))
+        self.assertEqual(app.time_input(key="inquiry_pickup_at_time").value, time(17, 45))
+        click(app, "Review inquiry")
+        click(app, "Submit inquiry")
+        saved = self.payloads[0]["p_snapshot"]["answers"]
+        self.assertEqual(saved["delivery_at"], "2020-06-13T09:30:00-05:00")
+        self.assertEqual(saved["pickup_at"], "2020-06-15T17:45:00-05:00")
+        self.assertIsNone(saved["setup_complete_by"])
+        self.assertIsNone(saved["event_start_at"])
+        self.assertIsNone(saved["rehearsal_at"])
+
+    def test_repeated_overnight_time_needs_no_extra_choice(self):
+        app = self.form()
+        app.date_input(key="inquiry_delivery_at_day").set_value(date(2026, 11, 1))
+        app.time_input(key="inquiry_delivery_at_time").set_value(time(1, 30))
+        click(app, "Review inquiry")
+        self.assertFalse(app.error)
+        self.assertEqual(app.session_state["public_inquiry_draft"].answers.delivery_at.utcoffset().total_seconds(), -5 * 3600)
 
     def test_validation_and_verification_errors_preserve_answers(self):
         app = self.form()

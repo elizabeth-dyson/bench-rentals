@@ -207,6 +207,10 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 - Two-step entry/review, Turnstile verification, field/payload limits and atomic
   session/global submission budgets are implemented. Drafts and exact retry
   identity persist within the open form session, not across refresh/close.
+- The public form asks only for optional delivery and pickup dates/times, shown
+  in AM/PM. Setup, event-start and rehearsal timestamps remain in the shared
+  model for later workflows but are not customer form questions. The form has
+  no daylight-saving choice.
 - Public creation preserves original answers and starts a `lead` with a pending
   submission. It does not reserve inventory, quote prices, send messages or
   confirm a rental. Expanded staff entry/review remains 5.5.
@@ -222,9 +226,9 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
   creating a second Supabase project. Real Turnstile and desktop/phone browser
   checks also remain pending. See [Public inquiry](PUBLIC_INQUIRY.md) for the
   exact procedure and limits of the verification.
-- Local verification on 2026-10-11: all 142 Python tests passed, including 17 new
-  public-inquiry tests; SQL/procedural syntax checks passed. These do not verify
-  live database behavior or browser integrations.
+- Local verification on 2026-10-18: all 144 Python tests passed, including 19
+  public-inquiry tests. Earlier SQL/procedural syntax checks passed. These do
+  not verify live database behavior or browser integrations.
 
 ## 5.5 Staff Entry and Review
 

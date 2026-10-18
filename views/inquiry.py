@@ -25,8 +25,7 @@ SOURCE_LABELS = {
     "facebook_marketplace": "Facebook Marketplace", "facebook_referral": "Facebook referral",
     "word_of_mouth": "Word of mouth", "repeat_customer": "Repeat customer", "other": "Other",
 }
-TIMES = {"delivery_at": "Requested delivery", "setup_complete_by": "Setup complete by",
-         "event_start_at": "Event start", "pickup_at": "Requested pickup", "rehearsal_at": "Rehearsal"}
+TIMES = {"delivery_at": "Requested delivery", "pickup_at": "Requested pickup"}
 
 
 @dataclass
@@ -78,17 +77,12 @@ def _form(draft: InquiryDraft) -> None:
                 index=list(DELIVERY_LABELS).index(draft.fields.get("delivery_preference", "unsure")),
                 format_func=DELIVERY_LABELS.get, key="inquiry_delivery_preference")
         with st.expander("Requested timing (optional)"):
-            st.caption("All times are America/Chicago. These are requests, not confirmed appointments. Leave unknown dates and times blank.")
+            st.caption("Delivery and pickup times are in the Chicago time zone. These are requests, not confirmed appointments. Leave unknown dates and times blank.")
             for name, label in TIMES.items():
                 values[name + "_day"] = st.date_input(label + " date", value=draft.fields.get(name + "_day"),
                     min_value=date(1, 1, 1), max_value=date(9999, 12, 31), key="inquiry_" + name + "_day")
-                values[name + "_time"] = st.time_input(label + " time", value=draft.fields.get(name + "_time"), key="inquiry_" + name + "_time")
-                values[name + "_fold"] = st.selectbox(label + " daylight-saving occurrence",
-                    ["Not applicable", "First occurrence", "Second occurrence"],
-                    index=["Not applicable", "First occurrence", "Second occurrence"].index(draft.fields.get(name + "_fold", "Not applicable")),
-                    help="Only choose first or second if your time falls in the repeated hour when clocks move back.",
-                    key="inquiry_" + name + "_fold")
-            values["timing_notes"] = text("timing_notes", "Timing notes", 4000, True)
+                values[name + "_time"] = st.time_input(label + " time", value=draft.fields.get(name + "_time"),
+                    format="12h", key="inquiry_" + name + "_time")
         with st.expander("Instructions and other details (optional)"):
             for name, label in (("rental_notes", "Anything else about your rental?"),
                                 ("delivery_instructions", "Delivery instructions"), ("pickup_instructions", "Pickup instructions")):
@@ -100,13 +94,13 @@ def _form(draft: InquiryDraft) -> None:
             timing = {}
             for name, label in TIMES.items():
                 try:
-                    timing[name] = local_inquiry_time(values[name + "_day"], values[name + "_time"], values[name + "_fold"])
+                    timing[name] = local_inquiry_time(values[name + "_day"], values[name + "_time"], "First occurrence")
                 except PublicValidationError as error:
                     raise PublicValidationError(f"{label}: {error}") from None
             answer_values = {name: values[name] for name in (
                 "customer_name", "preferred_contact_method", "email", "phone", "facebook_identity",
                 "event_date", "requested_bench_count", "event_type", "source", "delivery_preference",
-                "timing_notes", "rental_notes", "delivery_instructions", "pickup_instructions")}
+                "rental_notes", "delivery_instructions", "pickup_instructions")}
             answer_values["venue"] = VenueInput(**{name: values["venue_" + name] for name in VenueInput.__dataclass_fields__})
             answers = InquiryAnswers(**answer_values, **timing)
             public_snapshot(answers)
@@ -136,6 +130,9 @@ def _review(draft: InquiryDraft, config: PublicInquiryConfig) -> None:
                     for field_name, field_value in value.items():
                         if field_value:
                             st.text(f"Venue {field_name.replace('_', ' ')}: {field_value}")
+            elif name in TIMES and value:
+                local_time = getattr(answers, name)
+                st.text(f"{TIMES[name]}: {local_time.strftime('%b %d, %Y at %I:%M %p')} (Chicago time)")
             elif value:
                 label_value = DELIVERY_LABELS.get(value, value) if name == "delivery_preference" else SOURCE_LABELS.get(value, value) if name == "source" else value
                 st.text(f"{name.replace('_', ' ').capitalize()}: {label_value}")

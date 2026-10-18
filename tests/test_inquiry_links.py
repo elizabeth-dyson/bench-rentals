@@ -140,6 +140,8 @@ class InquiryLinkAppTests(unittest.TestCase):
         ):
             with self.subTest(setting=setting):
                 app = AppTest.from_function(link_test_app)
+                # AppTest uses real local secrets when its secrets dict is empty.
+                app.secrets["_TEST_ISOLATED_SECRETS"] = True
                 if setting is not None:
                     app.secrets["PUBLIC_INQUIRY_URL"] = setting
                 app.run()
