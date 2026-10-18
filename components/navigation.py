@@ -8,6 +8,7 @@ from components.auth import (
 from views.bookings import render_bookings
 from views.home import render_home
 from components.presentation import render_wordmark
+from views.inquiry import render_inquiry
 
 
 def render_navigation():
@@ -34,6 +35,7 @@ def render_navigation():
                     icon=":material/event_note:",
                     url_path="bookings",
                 ),
+                st.Page(render_inquiry, title="Request a quote", url_path="inquiry", visibility="hidden"),
             ]
         },
         position="sidebar",

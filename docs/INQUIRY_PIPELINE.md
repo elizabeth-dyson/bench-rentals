@@ -19,6 +19,13 @@ without creating snapshots. Public routes, private links, anonymous submission,
 and abuse protection belong to 5.4; expanded staff entry and review belong to
 5.5. Leave `PUBLIC_INQUIRY_URL` unset until the signed-out form is verified.
 
+**Phase 5.4 follow-on:** the initial public form and protected wrapper are
+implemented locally, and the user's post-installation inspection verifies their
+definitions in the inspected project. Live behavior remains pending. They reuse
+this operation unchanged. Private follow-up links remain explicitly deferred.
+See [PUBLIC_INQUIRY.md](PUBLIC_INQUIRY.md) for access, limits, minimal receipts,
+retry authorization and the exact manual installation/activation order.
+
 ## Python and SQL contracts
 
 `services/inquiry_submission.py` imports neither Streamlit nor initialized clients:
@@ -166,6 +173,12 @@ without a new extension.
 You run all Supabase SQL; no scripts have been remotely installed by the agent.
 Installation in the inspected project is confirmed above. The procedure below
 also applies to preparing an isolated test project or another deployment target.
+The two-session scripts below are advanced concurrency checks, not a requirement
+to buy a branch or create a second Supabase project before using Phase 5.4. For
+the current project's initial public path, run the rollback-only check described
+in [PUBLIC_INQUIRY.md](PUBLIC_INQUIRY.md) while sharing is disabled. That check
+exercises public creation through this pipeline but does not verify the staff
+wrapper or two-session concurrency; record those as pending.
 
 1. **Inspect:** run `supabase/inspect_inquiry_schema.sql`. Compare its complete
    report with the installed 5.1 baseline. It now includes private schema ownership,

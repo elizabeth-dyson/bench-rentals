@@ -1,4 +1,4 @@
--- READ ONLY. Run before/after installing Phase 5.1 or Phase 5.3.
+-- READ ONLY. Run before/after installing Phase 5.1, 5.3, or 5.4.
 -- Returns ONE result containing every inspection section, so copying the final
 -- SQL Editor result includes the whole report. No customer rows or credentials.
 with inspected_tables(table_name) as (
@@ -60,7 +60,7 @@ rpc_details as (
     join pg_namespace n on n.oid = p.pronamespace
     where (n.nspname = 'public' and p.proname in (
         'create_lead', 'update_lead', 'set_lead_disposition', 'protect_intake_submission',
-        'create_staff_inquiry', 'append_staff_inquiry_submission'
+        'create_staff_inquiry', 'append_staff_inquiry_submission', 'create_public_inquiry'
     )) or n.nspname = 'inquiry_private'
 ),
 schema_details as (
@@ -73,6 +73,19 @@ index_details as (
     where i.schemaname = 'public'
 )
 select jsonb_pretty(jsonb_build_object(
+    -- Metadata only: never expose configuration hashes or rate bucket contents.
+    'public_gateway_tables', coalesce((select jsonb_agg(jsonb_build_object(
+        'table', c.relname, 'owner', pg_get_userbyid(c.relowner), 'permissions', c.relacl,
+        'rls_enabled', c.relrowsecurity,
+        'columns', (select jsonb_agg(jsonb_build_object('name',a.attname,'type',format_type(a.atttypid,a.atttypmod),
+            'not_null',a.attnotnull,'default',pg_get_expr(d.adbin,d.adrelid)) order by a.attnum)
+            from pg_attribute a left join pg_attrdef d on d.adrelid=a.attrelid and d.adnum=a.attnum
+            where a.attrelid=c.oid and a.attnum>0 and not a.attisdropped),
+        'constraints', (select jsonb_agg(pg_get_constraintdef(con.oid)) from pg_constraint con where con.conrelid=c.oid),
+        'indexes', (select jsonb_agg(pg_get_indexdef(i.indexrelid)) from pg_index i where i.indrelid=c.oid),
+        'policies', (select jsonb_agg(to_jsonb(p)) from pg_policies p where p.schemaname='inquiry_private' and p.tablename=c.relname)
+    ) order by c.relname) from pg_class c join pg_namespace n on n.oid=c.relnamespace
+       where n.nspname='inquiry_private' and c.relname in ('public_config','public_rate_buckets') and c.relkind='r'), '[]'::jsonb),
     'private_schemas', coalesce((select jsonb_agg(to_jsonb(d)) from schema_details d), '[]'::jsonb),
     'indexes', coalesce((select jsonb_agg(to_jsonb(d) order by tablename, indexname) from index_details d), '[]'::jsonb),
     'columns', coalesce((select jsonb_agg(to_jsonb(d) order by table_name, ordinal_position)
