@@ -569,11 +569,8 @@ def _render_booking_detail(booking_number: Any) -> None:
         }
         st.success(success_messages[disposition_success.stage])
 
-    with st.container(horizontal=True, vertical_alignment="top"):
-        with st.container(width=540):
-            _render_contact_details(customer_record, booking)
-        with st.container(width=540):
-            _render_event_details(booking)
+    _render_contact_details(customer_record, booking)
+    _render_event_details(booking)
     _render_notes(booking)
 
     _render_lead_status(
