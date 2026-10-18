@@ -233,9 +233,25 @@ PUBLIC_INQUIRY_HOSTNAME = "<exact deployed hostname, without scheme/path>"
 # PUBLIC_INQUIRY_URL stays unset until the deployed signed-out flow is verified.
 ```
 
-1. Configure a managed Turnstile widget for the deployed hostname. The UI uses
-   action `initial_inquiry`. Use a real widget for the deployed hostname. Any
-   test keys belong only in local test configuration.
+The existing `SUPABASE_KEY` also must be a **publishable key** (or a legacy
+`anon` key). Staff sign in through that client so their authenticated requests
+remain subject to RLS. It can use the same publishable key as
+`PUBLIC_SUPABASE_ANON_KEY`; neither setting should contain a Supabase
+`sb_secret_` or legacy `service_role` key. The separate
+`PUBLIC_INQUIRY_GATEWAY_SECRET` is this application's own random gateway token,
+not a Supabase API key.
+
+1. In the [Cloudflare Turnstile dashboard](https://dash.cloudflare.com/?to=/:account/turnstile),
+   create a widget named, for example, `Bench Rentals inquiry`. Add the deployed
+   hostname (`tyler-bench-rentals.streamlit.app` for the current deployment),
+   without `https://` or `/inquiry`. Choose **Managed** mode and leave
+   pre-clearance off. Copy its **site key** to `TURNSTILE_SITE_KEY` and its
+   **secret key** to `TURNSTILE_SECRET_KEY`, in both local and Streamlit Cloud
+   deployment secrets as applicable. These keys are separate from Supabase
+   credentials and the gateway secret; never send the secret key in chat or
+   commit it. Cloudflare does not need to host the app or manage its DNS.
+   The UI uses action `initial_inquiry` automatically. Use a real widget for
+   the deployed hostname; test keys belong only in local test configuration.
 2. Deploy the code after the rollback-only database check. The form stays
    unavailable while either application or database enable flag is off.
    Missing/invalid secrets also disable the form without exposing values.
