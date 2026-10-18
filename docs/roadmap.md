@@ -195,8 +195,36 @@ Phases 1–4 are complete and retained as written. Extend their customer, bookin
 - Show clear validation, preserve answers after recoverable failures, and confirm success only after the inquiry and submission are saved.
 - Explain that submission requests a quote; it does not confirm a rental or reserve inventory.
 - Provide narrowly scoped server-side submission access while preserving internal RLS. Do not expose internal tables, customer searches, credentials, or staff notes.
-- Enforce token validation, expiration, revocation, and resubmission rules for private follow-up links.
+- Private follow-up links, including token validation, expiration, revocation, and
+  resubmission rules, are explicitly deferred from this increment.
 - Include appropriate input limits and abuse protection.
+
+### 5.4 Agreed Scope and Implementation Status
+
+- The initial `/inquiry` form is implemented locally in the current Streamlit
+  deployment. It bypasses staff session restoration and uses the 5.3 pipeline
+  through a narrowly authorized, server-secret-protected public RPC.
+- Two-step entry/review, Turnstile verification, field/payload limits and atomic
+  session/global submission budgets are implemented. Drafts and exact retry
+  identity persist within the open form session, not across refresh/close.
+- Public creation preserves original answers and starts a `lead` with a pending
+  submission. It does not reserve inventory, quote prices, send messages or
+  confirm a rental. Expanded staff entry/review remains 5.5.
+- Private follow-up links and their lifecycle/access rules remain a future
+  increment; this phase does not create or consume intake links.
+- Both application and database access default off. Keep `PUBLIC_INQUIRY_URL`
+  unset until signed-out verification. The user's post-installation inspection
+  verifies the Phase 5.4 function and private-table definitions in the inspected
+  project, with existing inspected access settings unchanged.
+- The current Supabase project can run a rollback-only synthetic database check
+  before public sharing, followed by one labeled live form submission. Separate
+  two-session concurrency tests remain pending and are not a prerequisite for
+  creating a second Supabase project. Real Turnstile and desktop/phone browser
+  checks also remain pending. See [Public inquiry](PUBLIC_INQUIRY.md) for the
+  exact procedure and limits of the verification.
+- Local verification on 2026-10-11: all 142 Python tests passed, including 17 new
+  public-inquiry tests; SQL/procedural syntax checks passed. These do not verify
+  live database behavior or browser integrations.
 
 ## 5.5 Staff Entry and Review
 

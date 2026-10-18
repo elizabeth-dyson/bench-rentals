@@ -29,7 +29,10 @@ it opens a panel with the complete URL. Use the copy icon, or select and copy th
 URL manually, then paste it into the customer's existing conversation. Copying
 does not create a booking, send a message, or reserve benches.
 
-**Leave `PUBLIC_INQUIRY_URL` unset until Phase 5.4 delivers the public form.**
+**Leave `PUBLIC_INQUIRY_URL` unset until the Phase 5.4 public form is installed
+and verified while signed out.** The form is implemented locally but disabled by
+default. Follow [Public inquiry deployment](docs/PUBLIC_INQUIRY.md) for the exact
+manual SQL order, isolated tests, Turnstile setup, secrets, and activation.
 The control stays disabled and displays “Inquiry form sharing isn’t available
 yet.” No Supabase SQL or database setup is needed for Phase 5.2.
 

@@ -1499,6 +1499,37 @@ The existing schema is the baseline architecture for the project.
 
 # Application RPCs
 
+## Pending Phase 5.4 public inquiry access
+
+**Installed definitions verified in the user's post-installation inspection of
+the inspected Supabase project.** The new function body and private-table
+metadata match the local installers; existing inspected access settings and
+function bodies are unchanged. The report does not identify the project as
+production or a test project. Live transaction/concurrency behavior remains
+unverified. See [PUBLIC_INQUIRY.md](PUBLIC_INQUIRY.md) for the current-project
+rollback check, configuration and activation.
+
+- `supabase/public_inquiry_schema.sql` adds two owner-only, RLS-enabled tables
+  in the unexposed `inquiry_private` schema: `public_config` (default-off flag,
+  hashed gateway credential, session/hour/day limits) and `public_rate_buckets`
+  (hashed-session/global bucket key, UTC start/expiry, count, unique key/start).
+  No customer records or existing application tables are changed.
+- `supabase/public_inquiry_rpc.sql` adds
+  `create_public_inquiry(uuid,jsonb,text,uuid)`, an owner-owned SECURITY DEFINER
+  wrapper with a fixed search path and execution granted only to anon/owner.
+  Every call requires the server-held gateway credential and enabled configuration.
+  It invokes the existing private transaction with forced public provenance,
+  NULL actor/booking target, and empty staff context.
+- The wrapper returns only `(accepted, request_id, replayed)`. It enforces public
+  payload limits and transactional fixed-window budgets of five/session/15 minutes,
+  30 globally/hour and 100 globally/day. Identical retries consume no new budget.
+- Existing internal RLS, application-table grants, staff RPCs, snapshot protection
+  and intake-link behavior are unchanged. Public/customer searches and staff-field
+  inputs are not introduced. There is no service-role application client.
+- The inspection report now includes gateway function and private-table metadata,
+  excluding configuration hashes and counter contents. Its function and schema
+  definitions were verified against the local SQL, not their execution behavior.
+
 ## `create_lead`
 
 **Installed Phase 5.1 revision (2026-09-28):** requires `supabase/inquiry_model.sql`
