@@ -19,13 +19,17 @@ resubmission) are explicitly deferred. Staff entry/review remains Phase 5.5.
   when the browser also has an internal login. Internal routes keep their login
   requirement. The form uses a fresh anonymous client, never the staff client or
   a service-role key.
-- Contact and event essentials come first. Venue, delivery preference, timing,
-  referral source, rental notes and instructions are optional. Only name, event
+- Contact and event essentials come first. Venue, delivery preference, requested
+  delivery/pickup date and time, referral source, rental notes and instructions
+  are optional. Only name, event
   date, positive bench count and a usable preferred contact method are required.
   Past event dates and quantities above inventory remain valid inquiries.
-- Requested timing is America/Chicago, with explicit repeated-hour selection and
-  rejection of nonexistent DST times. It does not set inventory windows or
-  confirm appointments.
+- Requested delivery and pickup times display in AM/PM in the Chicago time zone.
+  The form no longer asks for setup, event-start, or rehearsal times, or a
+  daylight-saving choice. An unusual repeated clock time uses its first
+  occurrence; a time that cannot occur on the selected date is rejected with a
+  plain request to choose another time. These requests do not set inventory
+  windows or confirm appointments.
 - Review captures original answers; Submit verifies Turnstile, then atomically
   creates a lead and pending original submission through the Phase 5.3 operation.
   Matching and preservation rules remain in [INQUIRY_PIPELINE.md](INQUIRY_PIPELINE.md).
@@ -291,12 +295,13 @@ there is no staff settings screen in this phase.
 
 ## Local verification
 
-On 2026-10-11, all **142 Python tests passed**, including 17 new public-inquiry
-service/UI tests. The final `git diff --check` also passed.
+On 2026-10-18, all **144 Python tests passed**, including 19 public-inquiry
+service/UI tests. The focused 19-test inquiry suite also passed.
 
-New unit/AppTest coverage exercises public limits, DST, proof binding, safe
+Unit/AppTest coverage exercises public limits, time-zone edge cases, proof binding, safe
 receipts/errors, disabled configuration, signed-out and signed-in public routing,
-draft preservation, edit/review, success and identical uncertain retries. Run:
+draft preservation, edit/review, delivery/pickup AM/PM entry and saved mapping,
+success and identical uncertain retries. Run:
 
 ```powershell
 uv run python -m unittest tests.test_public_inquiry tests.test_public_inquiry_page

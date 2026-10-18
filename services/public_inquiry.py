@@ -151,7 +151,7 @@ def local_inquiry_time(day: date | None, clock: time | None, occurrence: str | N
     except (OverflowError, ValueError):
         raise PublicValidationError("That date and time are outside the supported range.") from None
     if not valid:
-        raise PublicValidationError("That time does not exist in America/Chicago because the clocks move forward.")
+        raise PublicValidationError("Choose a different time for this date.")
     if len(valid) == 2 and valid[0].utcoffset() != valid[1].utcoffset():
         if occurrence not in ("First occurrence", "Second occurrence"):
             raise PublicValidationError("That time occurs twice in America/Chicago. Choose the first or second occurrence.")
